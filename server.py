@@ -134,6 +134,9 @@ def chat():
     messages = data.get("messages", [])
     system = data.get("system", "")
 
+    # Trim system prompt to avoid token limit issues
+    system_trimmed = system[:2000] if system else ""
+
     resp = req_lib.post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={
@@ -143,7 +146,7 @@ def chat():
         json={
             "model": "llama-3.1-8b-instant",
             "max_tokens": data.get("max_tokens", 600),
-            "messages": [{"role": "system", "content": system}] + messages if system else messages,
+            "messages": [{"role": "system", "content": system_trimmed}] + messages if system_trimmed else messages,
         },
         timeout=30,
     )
@@ -155,7 +158,8 @@ def chat():
         text = groq_data["choices"][0]["message"]["content"]
         return jsonify({"content": [{"type": "text", "text": text}]}), 200
     else:
-        return jsonify(groq_data), resp.status_code
+        error_msg = groq_data.get("error", {}).get("message", "Groq API error")
+        return jsonify({"content": [{"type": "text", "text": f"⚠️ {error_msg}"}]}), 200
 
 
 if __name__ == "__main__":
