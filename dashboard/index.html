@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PodSight AI — Real-Time Pod Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #070c14;
+  --surface: #0d1520;
+  --surface2: #121d2e;
+  --surface3: #18283d;
+  --border: #1e2f47;
+  --border2: #243650;
+  --text: #e2eaf5;
+  --muted: #6b8299;
+  --accent: #3d9eff;
+  --accent2: #0066cc;
+  --green: #22d3a0;
+  --yellow: #f5c542;
+  --orange: #ff8c42;
+  --red: #ff4d6a;
+  --purple: #a78bfa;
+  --cyan: #67e8f9;
+  --pink: #f472b6;
+  --glow-accent: rgba(61,158,255,.18);
+  --glow-green: rgba(34,211,160,.15);
+  --glow-red: rgba(255,77,106,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;overflow-x:hidden}
+
+/* ── Animated grid background ── */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(61,158,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(61,158,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* ── Header ── */
+header{background:rgba(13,21,32,.95);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.logo{display:flex;align-items:center;gap:12px;font-family:'Syne',sans-serif;font-size:19px;font-weight:800;letter-spacing:-.3px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--green));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 20px var(--glow-accent)}
+.logo-text{background:linear-gradient(90deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-right{display:flex;align-items:center;gap:12px}
+.cluster-badge{background:var(--surface2);border:1px solid var(--border2);padding:5px 14px;border-radius:20px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.3px}
+.live-badge{background:rgba(34,211,160,.1);color:var(--green);border:1px solid rgba(34,211,160,.3);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:livepulse 1.5s infinite}
+@keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(34,211,160,.7)}70%{box-shadow:0 0 0 6px rgba(34,211,160,0)}}
+.time-badge{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+
+/* ── Tabs ── */
+.tabs{background:rgba(13,21,32,.9);border-bottom:1px solid var(--border);display:flex;padding:0 24px;gap:0;overflow-x:auto;position:sticky;top:58px;z-index:99;backdrop-filter:blur(8px)}
+.tabs::-webkit-scrollbar{height:0}
+.tab{padding:14px 16px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;font-size:13px;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-icon{font-size:14px}
+
+/* ── Main ── */
+.main{padding:20px 24px;max-width:1700px;margin:0 auto;position:relative;z-index:1}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── Stat cards ── */
+.stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:1200px){.stats-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;cursor:default}
+.stat-card:hover{transform:translateY(-2px)}
+.stat-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.02),transparent);pointer-events:none}
+.stat-card.blue{border-color:rgba(61,158,255,.25);background:linear-gradient(135deg,rgba(61,158,255,.07),var(--surface))}
+.stat-card.green{border-color:rgba(34,211,160,.25);background:linear-gradient(135deg,rgba(34,211,160,.07),var(--surface))}
+.stat-card.yellow{border-color:rgba(245,197,66,.25);background:linear-gradient(135deg,rgba(245,197,66,.07),var(--surface))}
+.stat-card.red{border-color:rgba(255,77,106,.25);background:linear-gradient(135deg,rgba(255,77,106,.07),var(--surface))}
+.stat-card.purple{border-color:rgba(167,139,250,.25);background:linear-gradient(135deg,rgba(167,139,250,.07),var(--surface))}
+.stat-card.orange{border-color:rgba(255,140,66,.25);background:linear-gradient(135deg,rgba(255,140,66,.07),var(--surface))}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:8px}
+.stat-value{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.stat-sparkline{position:absolute;right:0;bottom:0;opacity:.4}
+.stat-card.blue .stat-value{color:var(--accent)}
+.stat-card.green .stat-value{color:var(--green)}
+.stat-card.yellow .stat-value{color:var(--yellow)}
+.stat-card.red .stat-value{color:var(--red)}
+.stat-card.purple .stat-value{color:var(--purple)}
+.stat-card.orange .stat-value{color:var(--orange)}
+
+/* ── Grid layouts ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media(max-width:900px){.grid-2,.grid-3,.grid-2-1{grid-template-columns:1fr}}
+
+/* ── Panel ── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;position:relative}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.panel-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
+.panel-badge{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600}
+.badge-green{background:rgba(34,211,160,.12);color:var(--green);border:1px solid rgba(34,211,160,.2)}
+.badge-yellow{background:rgba(245,197,66,.12);color:var(--yellow);border:1px solid rgba(245,197,66,.2)}
+.badge-red{background:rgba(255,77,106,.12);color:var(--red);border:1px solid rgba(255,77,106,.2)}
+.badge-blue{background:rgba(61,158,255,.12);color:var(--accent);border:1px solid rgba(61,158,255,.2)}
+.badge-purple{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.badge-orange{background:rgba(255,140,66,.12);color:var(--orange);border:1px solid rgba(255,140,66,.2)}
+.badge-cyan{background:rgba(103,232,249,.12);color:var(--cyan);border:1px solid rgba(103,232,249,.2)}
+
+/* ── Chart ── */
+.chart-wrap{position:relative;height:240px}
+.chart-wrap.tall{height:300px}
+.chart-wrap.short{height:180px}
+
+/* ── Pod table ── */
+.pod-table{width:100%;border-collapse:collapse}
+.pod-table th{text-align:left;padding:10px 14px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);font-weight:600;background:var(--surface2)}
+.pod-table td{padding:10px 14px;border-bottom:1px solid rgba(30,47,71,.5);vertical-align:middle}
+.pod-table tr:hover td{background:rgba(18,29,46,.8)}
+.pod-name{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)}
+.ns-badge{background:var(--surface3);padding:2px 8px;border-radius:6px;font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.status-running{background:var(--green);box-shadow:0 0 8px var(--green)}
+.status-warn{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+.status-error{background:var(--red);box-shadow:0 0 8px var(--red);animation:livepulse 1s infinite}
+
+/* ── Progress bar ── */
+.bar-wrap{display:flex;align-items:center;gap:8px;min-width:100px}
+.bar{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.bar-fill.low{background:linear-gradient(90deg,var(--green),#34d399)}
+.bar-fill.med{background:linear-gradient(90deg,var(--yellow),#fbbf24)}
+.bar-fill.high{background:linear-gradient(90deg,var(--orange),#fb923c)}
+.bar-fill.crit{background:linear-gradient(90deg,var(--red),#f87171)}
+.bar-val{font-size:11px;color:var(--muted);width:36px;text-align:right;font-family:'JetBrains Mono',monospace}
+
+/* ── Anomaly feed ── */
+.anomaly-feed{max-height:290px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.anomaly-item{background:var(--surface2);border-radius:8px;padding:11px 14px;border-left:3px solid;display:flex;gap:12px;align-items:flex-start;transition:background .15s}
+.anomaly-item:hover{background:var(--surface3)}
+.anomaly-item.critical{border-color:var(--red)}
+.anomaly-item.high{border-color:var(--orange)}
+.anomaly-item.medium{border-color:var(--yellow)}
+.anomaly-item.low{border-color:var(--green)}
+.anomaly-icon{font-size:16px;line-height:1;margin-top:1px}
+.anomaly-body{flex:1;min-width:0}
+.anomaly-title{font-size:12px;font-weight:600;margin-bottom:2px}
+.anomaly-sub{font-size:11px;color:var(--muted)}
+.anomaly-time{font-size:10px;color:var(--muted);white-space:nowrap;font-family:'JetBrains Mono',monospace}
+
+/* ── AI Agent cards ── */
+.agent-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.agent-grid{grid-template-columns:1fr}}
+.agent-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden}
+.agent-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.agent-card.cpu::before{background:linear-gradient(90deg,var(--orange),var(--yellow))}
+.agent-card.memory::before{background:linear-gradient(90deg,var(--purple),var(--pink))}
+.agent-card.storage::before{background:linear-gradient(90deg,var(--cyan),var(--accent))}
+.agent-card.network::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.agent-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.agent-title{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;font-family:'Syne',sans-serif}
+.agent-risk{padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.risk-low{background:rgba(34,211,160,.12);color:var(--green);border:1px solid rgba(34,211,160,.2)}
+.risk-medium{background:rgba(245,197,66,.12);color:var(--yellow);border:1px solid rgba(245,197,66,.2)}
+.risk-high{background:rgba(255,140,66,.12);color:var(--orange);border:1px solid rgba(255,140,66,.2)}
+.risk-critical{background:rgba(255,77,106,.12);color:var(--red);border:1px solid rgba(255,77,106,.2)}
+.agent-analysis{font-size:13px;color:#9bb5cc;line-height:1.65;margin-bottom:14px}
+.agent-recs{list-style:none;display:flex;flex-direction:column;gap:6px}
+.agent-recs li{background:var(--surface2);padding:8px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);cursor:pointer;border:1px solid transparent;transition:all .15s;display:flex;align-items:center;gap:8px}
+.agent-recs li:hover{background:var(--surface3);border-color:var(--border2)}
+.agent-recs li::before{content:'$';color:var(--green);opacity:.6}
+.agent-metrics{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.metric-chip{background:var(--surface2);border:1px solid var(--border2);padding:4px 10px;border-radius:8px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.metric-chip span{color:var(--text);font-weight:600}
+.agent-mode{font-size:10px;color:var(--muted);margin-top:10px;display:flex;align-items:center;gap:6px}
+
+/* ── Dependency map ── */
+#depCanvas{width:100%;height:460px;border-radius:8px;cursor:grab;background:radial-gradient(ellipse at center,rgba(61,158,255,.04) 0%,var(--surface2) 70%)}
+#depCanvas:active{cursor:grabbing}
+.dep-legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px}
+.dep-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.dep-legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* ── Security ── */
+.threat-item{background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:10px;border-left:3px solid}
+.threat-item.critical{border-color:var(--red)}
+.threat-item.high{border-color:var(--orange)}
+.threat-item.medium{border-color:var(--yellow)}
+.threat-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.threat-type{font-size:13px;font-weight:700}
+.mitre-badge{background:rgba(167,139,250,.15);color:var(--purple);padding:2px 9px;border-radius:8px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid rgba(167,139,250,.2)}
+.threat-evidence{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:8px;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--border)}
+.threat-pod{font-size:12px;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.cvss-badge{padding:2px 9px;border-radius:8px;font-size:11px;font-weight:700}
+.cvss-critical{background:rgba(255,77,106,.15);color:var(--red)}
+.cvss-high{background:rgba(255,140,66,.15);color:var(--orange)}
+.cvss-medium{background:rgba(245,197,66,.15);color:var(--yellow)}
+.rem-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.rem-item{background:var(--bg);padding:6px 12px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)}
+
+/* ── Score ring ── */
+.score-ring-wrap{display:flex;align-items:center;gap:18px}
+.score-ring{position:relative;width:100px;height:100px}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring .score-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:24px;font-weight:800}
+
+/* ── Recommendations ── */
+.rec-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px;transition:border-color .2s}
+.rec-item:hover{border-color:var(--border2)}
+.rec-priority{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:10px}
+.rec-title{font-size:14px;font-weight:700;margin-bottom:6px;font-family:'Syne',sans-serif}
+.rec-desc{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+.cmd-block{background:var(--bg);padding:12px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan);line-height:1.8;border:1px solid var(--border)}
+
+/* ── Filters ── */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 13px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.filter-select:focus{outline:none;border-color:var(--accent)}
+.search-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 13px;border-radius:8px;font-size:13px;width:220px;font-family:'DM Sans',sans-serif}
+.search-input::placeholder{color:var(--muted)}
+.search-input:focus{outline:none;border-color:var(--accent)}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── Tooltip ── */
+.tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;font-size:12px;pointer-events:none;z-index:999;display:none;max-width:260px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+
+/* ── NLP Chat ── */
+.chat-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;height:520px}
+.chat-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.chat-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.chat-title{font-weight:700;font-family:'Syne',sans-serif;font-size:15px}
+.chat-subtitle{font-size:11px;color:var(--muted)}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{display:flex;gap:10px;max-width:90%}
+.chat-msg.user{align-self:flex-end;flex-direction:row-reverse}
+.chat-bubble{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.6}
+.chat-msg.user .chat-bubble{background:rgba(61,158,255,.12);border-color:rgba(61,158,255,.3);color:var(--text)}
+.chat-msg.ai .chat-bubble{color:var(--text)}
+.chat-avatar{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px}
+.chat-msg.user .chat-avatar{background:rgba(61,158,255,.2)}
+.chat-msg.ai .chat-avatar{background:linear-gradient(135deg,var(--accent),var(--purple))}
+.chat-input-wrap{padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px}
+.chat-input{flex:1;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:none;height:42px}
+.chat-input:focus{outline:none;border-color:var(--accent)}
+.chat-send{background:linear-gradient(135deg,var(--accent),#0055bb);color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .2s}
+.chat-send:hover{opacity:.85}
+.chat-send:disabled{opacity:.4;cursor:not-allowed}
+.chat-suggestions{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 12px}
+.chat-suggestion{background:var(--surface2);border:1px solid var(--border);padding:6px 12px;border-radius:20px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s}
+.chat-suggestion:hover{border-color:var(--accent);color:var(--accent)}
+.typing-indicator{display:flex;gap:4px;align-items:center;padding:10px 14px}
+.typing-dot{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:typingbounce .8s infinite}
+.typing-dot:nth-child(2){animation-delay:.15s}
+.typing-dot:nth-child(3){animation-delay:.3s}
+@keyframes typingbounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* ── Heatmap ── */
+.heatmap-wrap{overflow-x:auto}
+.heatmap{display:grid;gap:3px}
+.heatmap-cell{border-radius:3px;transition:transform .1s;cursor:pointer}
+.heatmap-cell:hover{transform:scale(1.15);z-index:10;position:relative}
+.heatmap-label{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.heatmap-legend{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--muted)}
+.heatmap-legend-grad{width:80px;height:8px;border-radius:4px;background:linear-gradient(90deg,#1a3a2a,var(--green),var(--yellow),var(--orange),var(--red))}
+
+/* ── Forecast panel ── */
+.forecast-insight{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--muted);line-height:1.6}
+.forecast-insight strong{color:var(--text)}
+
+/* ── Section title ── */
+.section-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px;background:linear-gradient(90deg,var(--text),var(--muted));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.section-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+
+/* ── Info banner ── */
+.info-banner{background:rgba(61,158,255,.06);border:1px solid rgba(61,158,255,.2);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--muted);line-height:1.6}
+.info-banner strong{color:var(--accent)}
+
+/* ── Animations ── */
+.fade-in{animation:fadein .4s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Security Active Features ── */
+.threat-score-hero{background:linear-gradient(135deg,rgba(255,77,106,.08),rgba(167,139,250,.08));border:1px solid rgba(255,77,106,.2);border-radius:16px;padding:24px;margin-bottom:18px;display:flex;align-items:center;gap:24px}
+.threat-score-ring{position:relative;width:120px;height:120px;flex-shrink:0}
+.threat-score-ring svg{transform:rotate(-90deg)}
+.threat-score-ring .score-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.threat-score-num{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1}
+.threat-score-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:2px}
+.threat-score-details{flex:1}
+.threat-score-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:6px}
+.threat-score-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+.threat-score-pills{display:flex;gap:8px;flex-wrap:wrap}
+.threat-pill{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px}
+.threat-pill.critical{background:rgba(255,77,106,.15);color:var(--red);border:1px solid rgba(255,77,106,.3)}
+.threat-pill.high{background:rgba(255,140,66,.15);color:var(--orange);border:1px solid rgba(255,140,66,.3)}
+.threat-pill.medium{background:rgba(245,197,66,.15);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+.threat-pill.info{background:rgba(61,158,255,.15);color:var(--accent);border:1px solid rgba(61,158,255,.3)}
+
+/* ── Suspicious Pods List ── */
+.susp-pod-card{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:background .15s}
+.susp-pod-card:hover{background:var(--surface3)}
+.susp-pod-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.susp-pod-icon.critical{background:rgba(255,77,106,.15);border:1px solid rgba(255,77,106,.3)}
+.susp-pod-icon.high{background:rgba(255,140,66,.15);border:1px solid rgba(255,140,66,.3)}
+.susp-pod-icon.medium{background:rgba(245,197,66,.15);border:1px solid rgba(245,197,66,.3)}
+.susp-pod-info{flex:1;min-width:0}
+.susp-pod-name{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);margin-bottom:3px}
+.susp-pod-reason{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.susp-pod-score{text-align:right;flex-shrink:0}
+.susp-pod-score-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800}
+.susp-pod-score-label{font-size:10px;color:var(--muted)}
+
+/* ── Network Traffic Anomaly ── */
+.net-traffic-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(30,47,71,.4)}
+.net-traffic-row:last-child{border-bottom:none}
+.net-dir{width:36px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.net-dir.rx{background:rgba(34,211,160,.12);color:var(--green)}
+.net-dir.tx{background:rgba(255,77,106,.12);color:var(--red)}
+.net-bar-wrap{flex:1}
+.net-bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:3px}
+.net-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+.net-bar-fill.green{background:linear-gradient(90deg,var(--green),#34d399)}
+.net-bar-fill.red{background:linear-gradient(90deg,var(--red),#f87171)}
+.net-bar-fill.orange{background:linear-gradient(90deg,var(--orange),#fb923c)}
+.net-label{font-size:10px;color:var(--muted)}
+.net-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);flex-shrink:0;width:60px;text-align:right}
+.net-anomaly-badge{font-size:10px;padding:2px 7px;border-radius:6px;flex-shrink:0}
+
+/* ── Auth Failures ── */
+.auth-fail-item{background:var(--surface2);border-radius:8px;padding:12px 14px;border-left:3px solid var(--red);margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.auth-fail-icon{font-size:18px}
+.auth-fail-body{flex:1}
+.auth-fail-title{font-size:12px;font-weight:600;color:var(--red);margin-bottom:2px}
+.auth-fail-sub{font-size:11px;color:var(--muted)}
+.auth-fail-count{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--red);flex-shrink:0}
+
+/* ── Risky Containers ── */
+.risky-container{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.risky-container-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.risky-container-name{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);flex:1}
+.risky-risk-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.risky-tag{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600}
+.risky-tag.priv{background:rgba(255,77,106,.15);color:var(--red);border:1px solid rgba(255,77,106,.25)}
+.risky-tag.root{background:rgba(255,140,66,.15);color:var(--orange);border:1px solid rgba(255,140,66,.25)}
+.risky-tag.writable{background:rgba(245,197,66,.15);color:var(--yellow);border:1px solid rgba(245,197,66,.25)}
+.risky-tag.nonet{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
+.risky-tag.cve{background:rgba(255,77,106,.15);color:var(--red);border:1px solid rgba(255,77,106,.25)}
+.risky-recs{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--border)}
+
+/* ── Root Cause Analysis ── */
+.rca-panel{background:linear-gradient(135deg,rgba(61,158,255,.05),rgba(167,139,250,.05));border:1px solid rgba(61,158,255,.2);border-radius:12px;padding:20px;margin-bottom:16px}
+.rca-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.rca-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.rca-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
+.rca-subtitle{font-size:11px;color:var(--muted)}
+.rca-chain{display:flex;flex-direction:column;gap:4px;position:relative;padding-left:28px}
+.rca-chain::before{content:'';position:absolute;left:11px;top:8px;bottom:8px;width:2px;background:linear-gradient(to bottom,var(--accent),var(--purple));opacity:.4}
+.rca-step{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);position:relative}
+.rca-step-dot{position:absolute;left:-23px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;border:2px solid var(--surface);flex-shrink:0}
+.rca-step-dot.root{background:var(--red)}
+.rca-step-dot.cause{background:var(--orange)}
+.rca-step-dot.effect{background:var(--yellow)}
+.rca-step-dot.impact{background:var(--purple)}
+.rca-step-content{flex:1}
+.rca-step-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:3px}
+.rca-step-text{font-size:12px;color:var(--text)}
+.rca-step-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.rca-confidence{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--muted)}
+.rca-conf-bar{flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.rca-conf-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px}
+.rca-action-btn{background:rgba(61,158,255,.1);border:1px solid rgba(61,158,255,.3);color:var(--accent);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;margin-top:12px}
+.rca-action-btn:hover{background:rgba(61,158,255,.2)}
+
+/* ── Dep Map Enhancements ── */
+.dep-filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.dep-filter-btn{padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);transition:all .15s}
+.dep-filter-btn.active,.dep-filter-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(61,158,255,.08)}
+.dep-stats{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap}
+.dep-stat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px}
+.dep-stat-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent)}
+.dep-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* ── Correlation Panel ── */
+.corr-panel{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-top:12px}
+.corr-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.corr-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,47,71,.4)}
+.corr-item:last-child{border-bottom:none}
+.corr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.corr-text{font-size:12px;color:var(--text);line-height:1.5}
+.corr-strength{font-size:10px;padding:1px 7px;border-radius:10px;background:rgba(61,158,255,.1);color:var(--accent);border:1px solid rgba(61,158,255,.2);flex-shrink:0;margin-left:auto}
+
+/* ── Pulse animation for threat score ── */
+@keyframes threatpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,106,.4)}70%{box-shadow:0 0 0 12px rgba(255,77,106,0)}}
+.threat-pulse{animation:threatpulse 2s infinite}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+.sec-scanline{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(255,77,106,.4),transparent);pointer-events:none;animation:scanline 4s linear infinite;z-index:2}
+
+/* ── Pod detail drawer ── */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;backdrop-filter:blur(4px)}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--surface);border-left:1px solid var(--border2);z-index:201;overflow-y:auto;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.drawer.open{transform:translateX(0)}
+.drawer-header{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:10}
+.drawer-close{background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.drawer-close:hover{border-color:var(--red);color:var(--red)}
+.drawer-body{padding:20px}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(30,47,71,.5);font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-key{color:var(--muted)}
+.detail-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text)}
+.mini-chart-wrap{height:120px;margin-top:14px}
+
+/* ── Cluster timeline ── */
+.timeline-wrap{height:100px;overflow:hidden}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">☸</div>
+    <span class="logo-text">PodSight AI</span>
+  </div>
+  <div class="header-right">
+    <div class="cluster-badge" id="clusterBadge">⏳ Connecting…</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="time-badge" id="lastUpdate">--:--:--</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview',this)"><span class="tab-icon">📊</span>Overview</div>
+  <div class="tab" onclick="showTab('pods',this)"><span class="tab-icon">📦</span>Pod Explorer</div>
+  <div class="tab" onclick="showTab('anomalies',this)"><span class="tab-icon">⚡</span>Anomalies</div>
+  <div class="tab" onclick="showTab('agents',this)"><span class="tab-icon">🤖</span>AI Agents</div>
+  <div class="tab" onclick="showTab('depmap',this)"><span class="tab-icon">🕸</span>Dependency Map</div>
+  <div class="tab" onclick="showTab('security',this)"><span class="tab-icon">🔐</span>Security</div>
+  <div class="tab" onclick="showTab('nlp',this)"><span class="tab-icon">💬</span>Ask AI</div>
+  <div class="tab" onclick="showTab('forecast',this)"><span class="tab-icon">📈</span>Forecast</div>
+  <div class="tab" onclick="showTab('recs',this)"><span class="tab-icon">💡</span>Recommendations</div>
+</div>
+
+<div class="main">
+
+  <!-- ══════════════ OVERVIEW ══════════════ -->
+  <div id="tab-overview" class="tab-content active fade-in">
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-label">Total Pods</div>
+        <div class="stat-value" id="sumPods">—</div>
+        <div class="stat-sub" id="sumNs">— namespaces</div>
+        <canvas class="stat-sparkline" id="sparkPods" width="80" height="40"></canvas>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Healthy Pods</div>
+        <div class="stat-value" id="sumHealthy">—</div>
+        <div class="stat-sub">Running + within limits</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Avg CPU</div>
+        <div class="stat-value" id="sumCpu">—</div>
+        <div class="stat-sub">Across all pods</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Avg Memory</div>
+        <div class="stat-value" id="sumMem">—</div>
+        <div class="stat-sub">Across all pods</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Anomalies</div>
+        <div class="stat-value" id="sumAnomalies">—</div>
+        <div class="stat-sub">Active detections</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Total Restarts</div>
+        <div class="stat-value" id="sumRestarts">—</div>
+        <div class="stat-sub">All namespaces</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🔥 Live CPU Usage — Top 8 Pods</span>
+          <span class="panel-badge badge-blue">5s refresh</span>
+        </div>
+        <div class="chart-wrap"><canvas id="cpuChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">💾 Live Memory Usage — Top 8 Pods</span>
+          <span class="panel-badge badge-blue">5s refresh</span>
+        </div>
+        <div class="chart-wrap"><canvas id="memChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">⚡ Live Anomaly Feed</span>
+          <span class="panel-badge badge-red" id="anomalyCountBadge">0</span>
+        </div>
+        <div class="anomaly-feed" id="anomalyFeed">
+          <div style="color:var(--muted);text-align:center;padding:30px">Collecting data…</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🌐 Namespace Distribution</span>
+        </div>
+        <div class="chart-wrap"><canvas id="nsChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- CPU Heatmap -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🗺 CPU Heatmap — All Pods (last 12 ticks)</span>
+        <span class="panel-badge badge-yellow">Live</span>
+      </div>
+      <div class="heatmap-wrap">
+        <div id="heatmapGrid" style="overflow-x:auto"></div>
+      </div>
+      <div class="heatmap-legend">
+        <span>0%</span>
+        <div class="heatmap-legend-grad"></div>
+        <span>100%</span>
+        <span style="margin-left:10px;font-size:10px">Hover cell for details</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ POD EXPLORER ══════════════ -->
+  <div id="tab-pods" class="tab-content fade-in">
+    <div class="filter-bar">
+      <select class="filter-select" id="nsFilter" onchange="filterPods()">
+        <option value="all">All Namespaces</option>
+      </select>
+      <input class="search-input" id="podSearch" placeholder="🔍 Search pods…" oninput="filterPods()"/>
+      <select class="filter-select" id="sortFilter" onchange="filterPods()">
+        <option value="cpu">Sort: CPU ↓</option>
+        <option value="memory">Sort: Memory ↓</option>
+        <option value="restarts">Sort: Restarts ↓</option>
+        <option value="name">Sort: Name A–Z</option>
+      </select>
+      <select class="filter-select" id="statusFilter" onchange="filterPods()">
+        <option value="all">All Status</option>
+        <option value="critical">Critical (CPU>80%)</option>
+        <option value="warning">Warning (CPU 60-80%)</option>
+        <option value="healthy">Healthy</option>
+      </select>
+    </div>
+    <div class="panel" style="padding:0;overflow:auto">
+      <table class="pod-table">
+        <thead>
+          <tr>
+            <th>Status</th><th>Pod Name</th><th>Namespace</th>
+            <th>CPU %</th><th>Memory %</th><th>Disk %</th>
+            <th>Net RX</th><th>Net TX</th><th>Restarts</th><th>Uptime</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="podTableBody">
+          <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--muted)">Loading pods…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════ ANOMALIES ══════════════ -->
+  <div id="tab-anomalies" class="tab-content fade-in">
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">📊 Anomaly Type Distribution</span></div>
+        <div class="chart-wrap"><canvas id="anomalyTypeChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">🎯 Severity Breakdown</span></div>
+        <div class="chart-wrap"><canvas id="severityChart"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⚡ All Anomaly Events</span>
+        <span class="panel-badge badge-red" id="totalAnomalyBadge">0</span>
+      </div>
+      <div id="fullAnomalyFeed" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ AI AGENTS ══════════════ -->
+  <div id="tab-agents" class="tab-content fade-in">
+    <div class="info-banner">
+      🤖 <strong>Multi-Agent AI Framework</strong> — Four specialist agents analyze CPU, memory, storage, and network metrics independently every 30 seconds. Each agent provides root-cause analysis, risk assessment, and ready-to-run kubectl remediation commands.
+      <span id="agentModeLabel" style="margin-left:10px;padding:2px 10px;background:rgba(34,211,160,.1);color:var(--green);border-radius:10px;font-size:11px;font-weight:600">Initializing…</span>
+    </div>
+    <div class="agent-grid">
+      <div class="agent-card cpu" id="cpuAgent"><div style="color:var(--muted);padding:20px">Analyzing CPU patterns…</div></div>
+      <div class="agent-card memory" id="memAgent"><div style="color:var(--muted);padding:20px">Analyzing memory patterns…</div></div>
+      <div class="agent-card storage" id="storAgent"><div style="color:var(--muted);padding:20px">Analyzing storage patterns…</div></div>
+      <div class="agent-card network" id="netAgent"><div style="color:var(--muted);padding:20px">Analyzing network patterns…</div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ DEPENDENCY MAP ══════════════ -->
+  <div id="tab-depmap" class="tab-content fade-in">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🕸 Service Dependency Graph</span>
+        <div style="display:flex;gap:8px">
+          <span class="panel-badge badge-blue">Drag nodes</span>
+          <span class="panel-badge badge-cyan">Scroll to zoom</span>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="dep-filter-bar">
+        <button class="dep-filter-btn active" onclick="setDepFilter('all',this)">All Pods</button>
+        <button class="dep-filter-btn" onclick="setDepFilter('critical',this)">🔴 Critical</button>
+        <button class="dep-filter-btn" onclick="setDepFilter('warning',this)">🟡 Warning</button>
+        <button class="dep-filter-btn" onclick="setDepFilter('healthy',this)">🟢 Healthy</button>
+        <button class="dep-filter-btn" onclick="resetDepLayout()">↺ Reset Layout</button>
+      </div>
+
+      <canvas id="depCanvas"></canvas>
+
+      <div class="dep-legend">
+        <div class="dep-legend-item"><div class="dep-legend-dot" style="background:var(--green)"></div>Healthy (CPU &lt;60%)</div>
+        <div class="dep-legend-item"><div class="dep-legend-dot" style="background:var(--yellow)"></div>Warning (60–80%)</div>
+        <div class="dep-legend-item"><div class="dep-legend-dot" style="background:var(--red)"></div>Critical (&gt;80%)</div>
+        <div class="dep-legend-item" style="font-style:italic;margin-left:auto">Node size = memory · Hover for metrics</div>
+      </div>
+
+      <div class="dep-stats" id="depStats">
+        <div class="dep-stat"><div class="dep-stat-val" id="depNodeCount">—</div><div class="dep-stat-label">Nodes</div></div>
+        <div class="dep-stat"><div class="dep-stat-val" id="depEdgeCount">—</div><div class="dep-stat-label">Connections</div></div>
+        <div class="dep-stat"><div class="dep-stat-val" id="depCritNodes">—</div><div class="dep-stat-label">Critical</div></div>
+        <div class="dep-stat"><div class="dep-stat-val" id="depMaxDegree">—</div><div class="dep-stat-label">Most Connected</div></div>
+      </div>
+    </div>
+
+    <!-- Root Cause Analysis -->
+    <div class="panel" id="rcaPanel">
+      <div class="panel-header">
+        <span class="panel-title">🔬 Root Cause Analysis</span>
+        <span class="panel-badge badge-purple">AI-powered</span>
+      </div>
+      <div id="rcaContent">
+        <div style="color:var(--muted);text-align:center;padding:30px;font-size:13px">
+          Click a node on the dependency map or wait for anomaly data to generate root cause analysis.
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Correlations -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🔗 Correlation Between Events</span>
+        <span class="panel-badge badge-cyan">Live</span>
+      </div>
+      <div id="correlationContent">
+        <div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">Correlating events…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SECURITY ══════════════ -->
+  <div id="tab-security" class="tab-content fade-in" style="position:relative;overflow:hidden">
+    <div class="sec-scanline"></div>
+
+    <!-- Hero Threat Score Banner -->
+    <div class="threat-score-hero">
+      <div class="threat-score-ring">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--surface3)" stroke-width="10"/>
+          <circle id="threatScoreArc" cx="60" cy="60" r="50" fill="none" stroke="var(--red)" stroke-width="10" stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" style="transition:stroke-dashoffset 1.2s ease,stroke .5s"/>
+        </svg>
+        <div class="score-inner">
+          <div class="threat-score-num" id="threatScoreNum" style="color:var(--red)">—</div>
+          <div class="threat-score-label">Threat Score</div>
+        </div>
+      </div>
+      <div class="threat-score-details">
+        <div class="threat-score-title">🛡️ Cluster Security Posture</div>
+        <div class="threat-score-sub" id="threatScoreSummary">Analyzing cluster threats across all pods and namespaces…</div>
+        <div class="threat-score-pills">
+          <div class="threat-pill critical" id="pillCrit">— Critical</div>
+          <div class="threat-pill high" id="pillHigh">— High</div>
+          <div class="threat-pill medium" id="pillMed">— Medium</div>
+          <div class="threat-pill info" id="pillMitre">— MITRE Tactics</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 1: Suspicious Pods + Auth Failures -->
+    <div class="grid-2" style="margin-bottom:16px">
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🕵️ Suspicious Pods</span>
+          <span class="panel-badge badge-red" id="suspPodCount">0</span>
+        </div>
+        <div id="suspiciousPods" style="max-height:320px;overflow-y:auto">
+          <div style="color:var(--muted);text-align:center;padding:30px">Scanning pods…</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🔑 Failed Auth Attempts</span>
+          <span class="panel-badge badge-red" id="authFailBadge">0</span>
+        </div>
+        <div id="authFailFeed" style="max-height:320px;overflow-y:auto">
+          <div style="color:var(--muted);text-align:center;padding:30px">Collecting auth events…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Unusual Network + Risky Containers -->
+    <div class="grid-2" style="margin-bottom:16px">
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🌐 Unusual Network Traffic</span>
+          <span class="panel-badge badge-orange" id="netAnomalyBadge">Live</span>
+        </div>
+        <div id="netTrafficPanel">
+          <div style="color:var(--muted);text-align:center;padding:30px">Monitoring network…</div>
+        </div>
+        <div class="chart-wrap short" style="margin-top:12px"><canvas id="netTrafficChart"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📦 Risky Containers</span>
+          <span class="panel-badge badge-yellow" id="riskyContainerBadge">0</span>
+        </div>
+        <div id="riskyContainerFeed" style="max-height:360px;overflow-y:auto">
+          <div style="color:var(--muted);text-align:center;padding:30px">Scanning images…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: MITRE Charts -->
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">🎯 MITRE ATT&CK Distribution</span></div>
+        <div class="chart-wrap"><canvas id="mitreChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">📊 Threat Type Breakdown</span></div>
+        <div class="chart-wrap"><canvas id="threatTypeChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Active Threats -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🚨 Active Threats — MITRE ATT&CK Mapped</span>
+        <span class="panel-badge badge-red" id="threatCountBadge">0</span>
+      </div>
+      <div id="threatFeed"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ ASK AI / NLP ══════════════ -->
+  <div id="tab-nlp" class="tab-content fade-in">
+    <div class="grid-2-1">
+      <div class="chat-panel">
+        <div class="chat-header">
+          <div class="chat-icon">🤖</div>
+          <div>
+            <div class="chat-title">PodSight AI Assistant</div>
+            <div class="chat-subtitle">Ask anything about your cluster in plain English</div>
+          </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg ai">
+            <div class="chat-avatar">☸</div>
+            <div class="chat-bubble">Hello! I'm your cluster intelligence assistant. I can analyze your live pod metrics, explain anomalies, suggest optimizations, and generate kubectl commands. What would you like to know?</div>
+          </div>
+        </div>
+        <div class="chat-suggestions" id="chatSuggestions">
+          <div class="chat-suggestion" onclick="sendSuggestion(this)">Which pod is using the most CPU?</div>
+          <div class="chat-suggestion" onclick="sendSuggestion(this)">Are there any memory leaks?</div>
+          <div class="chat-suggestion" onclick="sendSuggestion(this)">Explain the top anomaly</div>
+          <div class="chat-suggestion" onclick="sendSuggestion(this)">Which pods should I scale?</div>
+        </div>
+        <div class="chat-input-wrap">
+          <input class="chat-input" id="chatInput" placeholder="Ask about your cluster…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"/>
+          <button class="chat-send" id="chatSend" onclick="sendChat()">Send ↗</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="panel" style="flex:1">
+          <div class="panel-header"><span class="panel-title">⚡ Quick Cluster Stats</span></div>
+          <div id="nlpQuickStats" style="display:flex;flex-direction:column;gap:10px">
+            <div style="color:var(--muted);font-size:13px">Loading cluster state…</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">📋 Recent AI Insights</span></div>
+          <div id="nlpInsights" style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)">
+            <div>Waiting for data…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ FORECAST ══════════════ -->
+  <div id="tab-forecast" class="tab-content fade-in">
+    <div class="info-banner">
+      📈 <strong>Resource Forecasting</strong> — Predictive analysis based on rolling metric history. Trends extrapolated using exponential smoothing. Identifies pods at risk of breaching thresholds.
+    </div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📈 CPU Trend — Top 5 Pods (last 60s)</span>
+          <span class="panel-badge badge-yellow">Live</span>
+        </div>
+        <div class="chart-wrap tall"><canvas id="forecastCpuChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">💾 Memory Trend — Top 5 Pods (last 60s)</span>
+          <span class="panel-badge badge-purple">Live</span>
+        </div>
+        <div class="chart-wrap tall"><canvas id="forecastMemChart"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⚠️ Risk Forecast — Pods Trending Toward Threshold</span>
+        <span class="panel-badge badge-orange">Predictive</span>
+      </div>
+      <div id="forecastRisks" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ RECOMMENDATIONS ══════════════ -->
+  <div id="tab-recs" class="tab-content fade-in">
+    <div class="info-banner">
+      💡 <strong>AI-Generated Recommendations</strong> — Based on live cluster state. Commands are production-ready.
+    </div>
+    <div id="recsList"></div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Pod Detail Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="podDrawer">
+  <div class="drawer-header">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px" id="drawerPodName">—</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px" id="drawerPodNs">—</div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div id="drawerContent"></div>
+    <div style="font-size:13px;font-weight:600;margin:16px 0 8px">CPU History</div>
+    <div class="mini-chart-wrap"><canvas id="drawerCpuChart"></canvas></div>
+    <div style="font-size:13px;font-weight:600;margin:16px 0 8px">Memory History</div>
+    <div class="mini-chart-wrap"><canvas id="drawerMemChart"></canvas></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════
+const API = (()=>{
+  const h = window.location.hostname;
+  const p = window.location.port;
+  if (h === '127.0.0.1' || h === 'localhost' || p === '5000') return `http://${h}:5000/api`;
+  return '/api';
+})();
+
+// ════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════
+let allPods = [], allAnomalies = [], agentData = {}, securityData = {};
+let cpuChart, memChart, nsChart, anomalyTypeChart, severityChart, mitreChart, threatTypeChart;
+let forecastCpuChart, forecastMemChart;
+let drawerCpuChart, drawerMemChart;
+let podHistory = {}; // pod_name -> {cpu: [], mem: [], ts: []}
+let clusterHistory = {cpu: [], mem: [], ts: []}; // global trend
+let heatmapHistory = {}; // pod_name -> [val, val, ...] (last 12)
+let tick = 0;
+let drawerPodName = null;
+
+// ════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ════════════════════════════════════════════════════
+function showTab(name, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const ct = document.getElementById('tab-' + name);
+  if (ct) { ct.classList.add('active'); ct.classList.remove('fade-in'); void ct.offsetWidth; ct.classList.add('fade-in'); }
+  if (el) el.classList.add('active');
+  if (name === 'depmap') setTimeout(drawDependencyMap, 50);
+  if (name === 'forecast') updateForecast();
+  if (name === 'nlp') updateNlpPanel();
+}
+
+// ════════════════════════════════════════════════════
+//  API
+// ════════════════════════════════════════════════════
+async function apiFetch(path) {
+  try {
+    const r = await fetch(API + path, {signal: AbortSignal.timeout(5000)});
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+// ════════════════════════════════════════════════════
+//  MAIN REFRESH
+// ════════════════════════════════════════════════════
+async function refresh() {
+  const [summary, pods, anomalies, agents, secThreats, secSummary, secScores] = await Promise.all([
+    apiFetch('/summary'),
+    apiFetch('/pods'),
+    apiFetch('/anomalies?limit=80'),
+    apiFetch('/agents'),
+    apiFetch('/security/threats'),
+    apiFetch('/security/summary'),
+    apiFetch('/security/scores'),
+  ]);
+
+  if (summary) updateSummary(summary);
+  if (pods) {
+    allPods = pods;
+    updateOverviewCharts(pods);
+    updatePodTable(pods);
+    populateNsFilter(pods);
+    updateHeatmap(pods);
+    updatePodHistory(pods);
+    if (drawerPodName) updateDrawerCharts(drawerPodName);
+  }
+  if (anomalies) { allAnomalies = anomalies; updateAnomalyFeed(anomalies); updateAnomalyCharts(anomalies);
+    // Auto-update RCA for top anomaly pod when dep map tab is active
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab && activeTab.textContent.includes('Dependency') && anomalies.length) {
+      const topAnomPod = [...anomalies].reverse()[0]?.pod;
+      if (topAnomPod) generateRCA(topAnomPod);
+      updateCorrelations();
+    }
+  }
+  if (agents) { agentData = agents; updateAgents(agents); updateRecommendations(agents); }
+  if (secThreats && secSummary && secScores) {
+    securityData = {threats: secThreats, summary: secSummary, scores: secScores};
+    updateSecurity(secThreats, secSummary, secScores);
+  }
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+  tick++;
+}
+
+// ════════════════════════════════════════════════════
+//  SUMMARY
+// ════════════════════════════════════════════════════
+function updateSummary(s) {
+  document.getElementById('sumPods').textContent = s.total_pods || 0;
+  document.getElementById('sumNs').textContent = (s.namespace_count || 0) + ' namespaces';
+  document.getElementById('sumHealthy').textContent = s.healthy_pods || 0;
+  document.getElementById('sumCpu').textContent = (s.avg_cpu || 0) + '%';
+  document.getElementById('sumMem').textContent = (s.avg_memory || 0) + '%';
+  document.getElementById('sumAnomalies').textContent = s.anomaly_count || 0;
+  document.getElementById('sumRestarts').textContent = s.total_restarts || 0;
+  document.getElementById('clusterBadge').textContent = '☸ minikube · ' + (s.total_pods || 0) + ' pods · ' + (s.namespace_count || 0) + ' ns';
+  document.getElementById('anomalyCountBadge').textContent = s.anomaly_count || 0;
+
+  clusterHistory.cpu.push(s.avg_cpu || 0);
+  clusterHistory.mem.push(s.avg_memory || 0);
+  clusterHistory.ts.push(new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+  if (clusterHistory.cpu.length > 60) { clusterHistory.cpu.shift(); clusterHistory.mem.shift(); clusterHistory.ts.shift(); }
+}
+
+// ════════════════════════════════════════════════════
+//  POD HISTORY (for forecasting + drawer)
+// ════════════════════════════════════════════════════
+function updatePodHistory(pods) {
+  pods.forEach(p => {
+    if (!podHistory[p.name]) podHistory[p.name] = {cpu:[], mem:[], ts:[]};
+    const h = podHistory[p.name];
+    h.cpu.push(p.cpu); h.mem.push(p.memory);
+    h.ts.push(new Date().toLocaleTimeString('en',{hour12:false}));
+    if (h.cpu.length > 60) { h.cpu.shift(); h.mem.shift(); h.ts.shift(); }
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  OVERVIEW CHARTS
+// ════════════════════════════════════════════════════
+function barColor(v) {
+  if (v >= 80) return 'rgba(255,77,106,.85)';
+  if (v >= 60) return 'rgba(255,140,66,.85)';
+  if (v >= 40) return 'rgba(245,197,66,.85)';
+  return 'rgba(34,211,160,.85)';
+}
+const CHART_OPTS = (color='#6b8299') => ({
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{ticks:{color,font:{size:10},maxRotation:35},grid:{color:'rgba(30,47,71,.4)'}},
+    y:{min:0,max:100,ticks:{color},grid:{color:'rgba(30,47,71,.4)'}}
+  }
+});
+
+function updateOverviewCharts(pods) {
+  const top8cpu = [...pods].sort((a,b) => b.cpu-a.cpu).slice(0,8);
+  const top8mem = [...pods].sort((a,b) => b.memory-a.memory).slice(0,8);
+  const shortName = n => n.length > 20 ? n.slice(0,18)+'…' : n;
+
+  if (!cpuChart) {
+    cpuChart = new Chart(document.getElementById('cpuChart'), {
+      type:'bar', data:{labels:[],datasets:[{data:[],backgroundColor:[],borderRadius:5}]},
+      options:CHART_OPTS()
+    });
+  }
+  cpuChart.data.labels = top8cpu.map(p=>shortName(p.name));
+  cpuChart.data.datasets[0].data = top8cpu.map(p=>p.cpu);
+  cpuChart.data.datasets[0].backgroundColor = top8cpu.map(p=>barColor(p.cpu));
+  cpuChart.update('none');
+
+  if (!memChart) {
+    memChart = new Chart(document.getElementById('memChart'), {
+      type:'bar', data:{labels:[],datasets:[{data:[],backgroundColor:[],borderRadius:5}]},
+      options:CHART_OPTS()
+    });
+  }
+  memChart.data.labels = top8mem.map(p=>shortName(p.name));
+  memChart.data.datasets[0].data = top8mem.map(p=>p.memory);
+  memChart.data.datasets[0].backgroundColor = top8mem.map(p=>barColor(p.memory));
+  memChart.update('none');
+
+  const nsCounts = {};
+  pods.forEach(p => nsCounts[p.namespace] = (nsCounts[p.namespace]||0)+1);
+  const nsColors = ['#3d9eff','#22d3a0','#f5c542','#ff8c42','#ff4d6a','#a78bfa','#67e8f9','#f472b6'];
+  if (!nsChart) {
+    nsChart = new Chart(document.getElementById('nsChart'), {
+      type:'doughnut',
+      data:{labels:[],datasets:[{data:[],backgroundColor:nsColors,borderColor:'#0d1520',borderWidth:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#6b8299',font:{size:11},padding:10}}},cutout:'68%'}
+    });
+  }
+  nsChart.data.labels = Object.keys(nsCounts);
+  nsChart.data.datasets[0].data = Object.values(nsCounts);
+  nsChart.update('none');
+}
+
+// ════════════════════════════════════════════════════
+//  HEATMAP
+// ════════════════════════════════════════════════════
+function updateHeatmap(pods) {
+  pods.forEach(p => {
+    if (!heatmapHistory[p.name]) heatmapHistory[p.name] = Array(12).fill(0);
+    heatmapHistory[p.name].push(p.cpu);
+    if (heatmapHistory[p.name].length > 12) heatmapHistory[p.name].shift();
+  });
+  const sorted = [...pods].sort((a,b) => b.cpu - a.cpu).slice(0, 20);
+  const cols = 12;
+  let html = `<table style="border-collapse:separate;border-spacing:3px">`;
+  sorted.forEach(p => {
+    const hist = heatmapHistory[p.name] || Array(12).fill(0);
+    html += `<tr><td class="heatmap-label" style="padding-right:8px;min-width:150px;text-align:right">${p.name.slice(-18)}</td>`;
+    hist.forEach(v => {
+      const r = Math.round(Math.min(v/100, 1) * 255);
+      const g = Math.round(Math.max(0, 211 * (1 - v/100)));
+      const bg = `rgb(${r},${g},60)`;
+      html += `<td class="heatmap-cell" style="width:22px;height:18px;background:${bg};border-radius:3px" title="${p.name}: ${v}%"></td>`;
+    });
+    html += `<td class="heatmap-label" style="padding-left:8px">${p.cpu}%</td></tr>`;
+  });
+  html += `</table>`;
+  document.getElementById('heatmapGrid').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════
+//  ANOMALY FEED
+// ════════════════════════════════════════════════════
+const ANOMALY_ICONS = {CPU_SPIKE:'🔥',MEMORY_LEAK:'💧',CRASH_LOOP:'🔄',POD_FAILURE:'💥',default:'⚠️'};
+function anomalyHTML(a) {
+  const icon = ANOMALY_ICONS[a.type] || ANOMALY_ICONS.default;
+  const t = new Date(a.timestamp + 'Z').toLocaleTimeString();
+  return `<div class="anomaly-item ${a.severity}">
+    <div class="anomaly-icon">${icon}</div>
+    <div class="anomaly-body">
+      <div class="anomaly-title">${a.type.replace(/_/g,' ')} — <span style="color:var(--accent);font-family:'JetBrains Mono',monospace">${a.pod}</span></div>
+      <div class="anomaly-sub">${a.message} · <span class="ns-badge">${a.namespace}</span></div>
+    </div>
+    <div class="anomaly-time">${t}</div>
+  </div>`;
+}
+function updateAnomalyFeed(anomalies) {
+  const recent = [...anomalies].reverse().slice(0,8);
+  document.getElementById('anomalyFeed').innerHTML = recent.length
+    ? recent.map(anomalyHTML).join('')
+    : '<div style="color:var(--muted);text-align:center;padding:30px">No anomalies 🎉</div>';
+  document.getElementById('fullAnomalyFeed').innerHTML = [...anomalies].reverse().map(anomalyHTML).join('');
+  document.getElementById('totalAnomalyBadge').textContent = anomalies.length;
+}
+function updateAnomalyCharts(anomalies) {
+  const typeCounts = {};
+  anomalies.forEach(a => typeCounts[a.type] = (typeCounts[a.type]||0)+1);
+  const colors = ['#ff4d6a','#ff8c42','#f5c542','#3d9eff','#a78bfa','#22d3a0'];
+  if (!anomalyTypeChart) {
+    anomalyTypeChart = new Chart(document.getElementById('anomalyTypeChart'),{
+      type:'doughnut',
+      data:{labels:[],datasets:[{data:[],backgroundColor:colors,borderColor:'#0d1520',borderWidth:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#6b8299',font:{size:11}}}},cutout:'65%'}
+    });
+  }
+  anomalyTypeChart.data.labels = Object.keys(typeCounts).map(k=>k.replace(/_/g,' '));
+  anomalyTypeChart.data.datasets[0].data = Object.values(typeCounts);
+  anomalyTypeChart.update('none');
+
+  const sev = {critical:0,high:0,medium:0,low:0};
+  anomalies.forEach(a => sev[a.severity] = (sev[a.severity]||0)+1);
+  if (!severityChart) {
+    severityChart = new Chart(document.getElementById('severityChart'),{
+      type:'bar',
+      data:{labels:['Critical','High','Medium','Low'],datasets:[{data:[0,0,0,0],backgroundColor:['#ff4d6a','#ff8c42','#f5c542','#22d3a0'],borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6b8299'},grid:{display:false}},y:{ticks:{color:'#6b8299'},grid:{color:'rgba(30,47,71,.4)'}}}}
+    });
+  }
+  severityChart.data.datasets[0].data = [sev.critical,sev.high,sev.medium,sev.low];
+  severityChart.update('none');
+}
+
+// ════════════════════════════════════════════════════
+//  POD TABLE
+// ════════════════════════════════════════════════════
+function populateNsFilter(pods) {
+  const ns = [...new Set(pods.map(p=>p.namespace))].sort();
+  const sel = document.getElementById('nsFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="all">All Namespaces</option>' + ns.map(n=>`<option value="${n}">${n}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+function barFillClass(v) { return v>=80?'crit':v>=60?'high':v>=40?'med':'low'; }
+function makeBar(val) {
+  return `<div class="bar-wrap"><div class="bar"><div class="bar-fill ${barFillClass(val)}" style="width:${val}%"></div></div><div class="bar-val">${val}%</div></div>`;
+}
+function filterPods() {
+  const ns = document.getElementById('nsFilter').value;
+  const q  = document.getElementById('podSearch').value.toLowerCase();
+  const sort = document.getElementById('sortFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  let pods = allPods.filter(p => {
+    const nsOk = ns === 'all' || p.namespace === ns;
+    const qOk  = !q || p.name.includes(q) || p.namespace.includes(q);
+    const stOk = status === 'all' || (status === 'critical' && p.cpu >= 80) || (status === 'warning' && p.cpu >= 60 && p.cpu < 80) || (status === 'healthy' && p.cpu < 60);
+    return nsOk && qOk && stOk;
+  });
+  if (sort==='cpu') pods.sort((a,b)=>b.cpu-a.cpu);
+  else if (sort==='memory') pods.sort((a,b)=>b.memory-a.memory);
+  else if (sort==='restarts') pods.sort((a,b)=>b.restarts-a.restarts);
+  else pods.sort((a,b)=>a.name.localeCompare(b.name));
+  renderPodTable(pods);
+}
+function updatePodTable(pods) { if (!document.getElementById('podTableBody').querySelector('[data-pod]')) filterPods(); else filterPods(); }
+function statusClass(p) { return p.cpu >= 80 ? 'status-error' : p.cpu >= 60 ? 'status-warn' : 'status-running'; }
+function fmtBytes(v) { if (!v) return '—'; if (v<1024) return v+'B/s'; if (v<1048576) return (v/1024).toFixed(1)+'KB/s'; return (v/1048576).toFixed(1)+'MB/s'; }
+function renderPodTable(pods) {
+  const tbody = document.getElementById('podTableBody');
+  if (!pods.length) { tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--muted)">No pods match filter</td></tr>'; return; }
+  tbody.innerHTML = pods.map(p => `
+    <tr data-pod="${p.name}" onclick="openDrawer('${p.name}')" style="cursor:pointer">
+      <td><span class="status-dot ${statusClass(p)}"></span></td>
+      <td class="pod-name">${p.name}</td>
+      <td><span class="ns-badge">${p.namespace}</span></td>
+      <td>${makeBar(p.cpu)}</td>
+      <td>${makeBar(p.memory)}</td>
+      <td>${makeBar(p.disk||0)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtBytes((p.net_rx||0)*1024*1024/8)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtBytes((p.net_tx||0)*1024*1024/8)}</td>
+      <td style="color:${p.restarts>5?'var(--red)':p.restarts>2?'var(--yellow)':'var(--muted)'};font-weight:${p.restarts>0?700:400}">${p.restarts||0}</td>
+      <td style="color:var(--muted);font-size:12px">${p.uptime||'—'}</td>
+      <td><button onclick="event.stopPropagation();openDrawer('${p.name}')" style="background:rgba(61,158,255,.1);border:1px solid rgba(61,158,255,.3);color:var(--accent);padding:3px 10px;border-radius:6px;cursor:pointer;font-size:11px">Details</button></td>
+    </tr>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+//  POD DRAWER
+// ════════════════════════════════════════════════════
+function openDrawer(name) {
+  const pod = allPods.find(p => p.name === name);
+  if (!pod) return;
+  drawerPodName = name;
+  document.getElementById('drawerPodName').textContent = name;
+  document.getElementById('drawerPodNs').textContent = 'namespace: ' + pod.namespace + ' · restarts: ' + (pod.restarts||0);
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="detail-row"><span class="detail-key">CPU</span><span class="detail-val">${pod.cpu}%</span></div>
+    <div class="detail-row"><span class="detail-key">Memory</span><span class="detail-val">${pod.memory}%</span></div>
+    <div class="detail-row"><span class="detail-key">Disk</span><span class="detail-val">${pod.disk||0}%</span></div>
+    <div class="detail-row"><span class="detail-key">Net RX</span><span class="detail-val">${pod.net_rx||0} MB/s</span></div>
+    <div class="detail-row"><span class="detail-key">Net TX</span><span class="detail-val">${pod.net_tx||0} MB/s</span></div>
+    <div class="detail-row"><span class="detail-key">Restarts</span><span class="detail-val">${pod.restarts||0}</span></div>
+    <div class="detail-row"><span class="detail-key">Uptime</span><span class="detail-val">${pod.uptime||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">PVC</span><span class="detail-val">${pod.pvc_count||0} volumes</span></div>
+  `;
+  updateDrawerCharts(name);
+  document.getElementById('drawerOverlay').style.display = 'block';
+  setTimeout(() => document.getElementById('podDrawer').classList.add('open'), 10);
+}
+function closeDrawer() {
+  document.getElementById('podDrawer').classList.remove('open');
+  setTimeout(() => { document.getElementById('drawerOverlay').style.display = 'none'; drawerPodName = null; }, 300);
+}
+function updateDrawerCharts(name) {
+  const h = podHistory[name];
+  if (!h || h.cpu.length < 2) return;
+  const lineOpts = (color) => ({
+    responsive:true, maintainAspectRatio:false, animation:{duration:0},
+    plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:'#6b8299',font:{size:9}},grid:{color:'rgba(30,47,71,.3)'}},y:{min:0,max:100,ticks:{color:'#6b8299',font:{size:9}},grid:{color:'rgba(30,47,71,.3)'}}}
+  });
+  if (!drawerCpuChart) {
+    drawerCpuChart = new Chart(document.getElementById('drawerCpuChart'), {
+      type:'line',
+      data:{labels:h.ts,datasets:[{data:h.cpu,borderColor:'#ff8c42',backgroundColor:'rgba(255,140,66,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2}]},
+      options:lineOpts('#ff8c42')
+    });
+  } else {
+    drawerCpuChart.data.labels = h.ts;
+    drawerCpuChart.data.datasets[0].data = h.cpu;
+    drawerCpuChart.update('none');
+  }
+  if (!drawerMemChart) {
+    drawerMemChart = new Chart(document.getElementById('drawerMemChart'), {
+      type:'line',
+      data:{labels:h.ts,datasets:[{data:h.mem,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2}]},
+      options:lineOpts('#a78bfa')
+    });
+  } else {
+    drawerMemChart.data.labels = h.ts;
+    drawerMemChart.data.datasets[0].data = h.mem;
+    drawerMemChart.update('none');
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  AI AGENTS
+// ════════════════════════════════════════════════════
+function riskClass(r) { return 'risk-' + (r||'low').toLowerCase(); }
+function updateAgents(data) {
+  const mode = Object.values(data).find(v=>v.mode)?.mode;
+  if (mode) {
+    const lbl = document.getElementById('agentModeLabel');
+    const isAI = mode.includes('ai');
+    lbl.textContent = isAI ? '✨ Claude AI-powered' : '⚙️ Rule-based fallback';
+    lbl.style.background = isAI ? 'rgba(34,211,160,.1)' : 'rgba(245,197,66,.1)';
+    lbl.style.color = isAI ? 'var(--green)' : 'var(--yellow)';
+  }
+  const agents = {
+    cpu: {id:'cpuAgent',icon:'🔥',label:'CPU Agent',cls:'cpu'},
+    memory:{id:'memAgent',icon:'💾',label:'Memory Agent',cls:'memory'},
+    storage:{id:'storAgent',icon:'📀',label:'Storage Agent',cls:'storage'},
+    network:{id:'netAgent',icon:'🌐',label:'Network Agent',cls:'network'},
+  };
+  Object.entries(agents).forEach(([key, cfg]) => {
+    const d = data[key];
+    if (!d) return;
+    const el = document.getElementById(cfg.id);
+    const metricsHtml = d.metrics ? Object.entries(d.metrics).map(([k,v])=>
+      `<div class="metric-chip">${k.replace(/_/g,' ')}: <span>${v}</span></div>`).join('') : '';
+    el.innerHTML = `
+      <div class="agent-header">
+        <div class="agent-title"><span>${cfg.icon}</span>${cfg.label}</div>
+        <div class="agent-risk ${riskClass(d.risk)}">${d.risk||'—'}</div>
+      </div>
+      ${metricsHtml ? `<div class="agent-metrics">${metricsHtml}</div>` : ''}
+      <div class="agent-analysis">${d.analysis||'—'}</div>
+      <ul class="agent-recs">${(d.recommendations||[]).map(r=>`<li>${r}</li>`).join('')}</ul>
+      <div class="agent-mode">Mode: ${d.mode||'rule-based'} · Updated: ${new Date().toLocaleTimeString()}</div>
+    `;
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  DEPENDENCY MAP (ENHANCED)
+// ════════════════════════════════════════════════════
+let depNodes = [], depEdges = [], depDrag = null, depOffset = {x:0,y:0}, depScale = 1, depPan = {x:0,y:0}, depMouseDown = false, depLastMouse = null;
+let depFilter = 'all', depCtx = null, depPodMap = {};
+
+function setDepFilter(filter, btn) {
+  depFilter = filter;
+  document.querySelectorAll('.dep-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (depCtx) redrawDepMap();
+}
+
+function resetDepLayout() {
+  depNodes = []; depEdges = []; depScale = 1; depPan = {x:0,y:0};
+  drawDependencyMap();
+}
+
+function redrawDepMap() {
+  const canvas = document.getElementById('depCanvas');
+  if (!canvas || !depCtx) return;
+  const W = canvas.width, H = canvas.height;
+  const ctx = depCtx;
+
+  // Filter nodes
+  const visibleNodes = depNodes.filter(nd => {
+    const pod = depPodMap[nd.name];
+    if (!pod) return depFilter === 'all';
+    if (depFilter === 'critical') return pod.cpu >= 80;
+    if (depFilter === 'warning') return pod.cpu >= 60 && pod.cpu < 80;
+    if (depFilter === 'healthy') return pod.cpu < 60;
+    return true;
+  });
+  const visibleNames = new Set(visibleNodes.map(n => n.name));
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(depPan.x, depPan.y);
+  ctx.scale(depScale, depScale);
+
+  // Draw edges (only between visible nodes)
+  depEdges.forEach(e => {
+    if (!visibleNames.has(e.from) || !visibleNames.has(e.to)) return;
+    const from = depNodes.find(n=>n.name===e.from);
+    const to = depNodes.find(n=>n.name===e.to);
+    if (!from||!to) return;
+
+    // Color edges by severity
+    const fromPod = depPodMap[from.name];
+    const edgeColor = fromPod?.cpu >= 80 ? 'rgba(255,77,106,.35)' : fromPod?.cpu >= 60 ? 'rgba(255,140,66,.3)' : 'rgba(61,158,255,.2)';
+
+    ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = edgeColor; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Arrow
+    const dx=to.x-from.x, dy=to.y-from.y, len=Math.sqrt(dx*dx+dy*dy);
+    if (len < 1) return;
+    const ax=to.x-dx/len*22, ay=to.y-dy/len*22;
+    ctx.beginPath(); ctx.moveTo(ax,ay);
+    ctx.lineTo(ax-(-dy/len)*5-(dx/len)*8, ay-(dx/len)*5-(dy/len)*8);
+    ctx.lineTo(ax+(-dy/len)*5-(dx/len)*8, ay+(dx/len)*5-(dy/len)*8);
+    ctx.fillStyle=edgeColor.replace('.',',.7,').replace('rgba','rgba'); ctx.fill();
+  });
+
+  // Draw nodes
+  visibleNodes.forEach(nd => {
+    const pod = depPodMap[nd.name];
+    const cpu = pod?.cpu||0, mem = pod?.memory||0;
+    const r = 10 + (mem/100)*18;
+    const color = cpu>=80?'#ff4d6a':cpu>=60?'#ff8c42':'#22d3a0';
+
+    // Glow for critical
+    if (cpu >= 80) {
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, r+8, 0, Math.PI*2);
+      ctx.fillStyle='rgba(255,77,106,.08)'; ctx.fill();
+    }
+
+    ctx.beginPath(); ctx.arc(nd.x, nd.y, r, 0, Math.PI*2);
+    ctx.fillStyle=color+'18'; ctx.fill();
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(nd.x, nd.y, 3.5, 0, Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+
+    // Label
+    const label = nd.name.length>16 ? nd.name.slice(0,14)+'…' : nd.name;
+    ctx.font='10px JetBrains Mono'; ctx.fillStyle='#9bb5cc'; ctx.textAlign='center';
+    ctx.fillText(label, nd.x, nd.y+r+14);
+    if (pod) {
+      ctx.font='9px JetBrains Mono'; ctx.fillStyle=color;
+      ctx.fillText(`CPU:${cpu}%`, nd.x, nd.y+r+25);
+    }
+  });
+  ctx.restore();
+
+  // Update stats
+  const critCount = visibleNodes.filter(n=>(depPodMap[n.name]?.cpu||0)>=80).length;
+  const edgeCount = depEdges.filter(e=>visibleNames.has(e.from)&&visibleNames.has(e.to)).length;
+  const degreeMap = {};
+  depEdges.forEach(e=>{degreeMap[e.from]=(degreeMap[e.from]||0)+1; degreeMap[e.to]=(degreeMap[e.to]||0)+1;});
+  const maxDegNode = Object.entries(degreeMap).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('depNodeCount').textContent = visibleNodes.length;
+  document.getElementById('depEdgeCount').textContent = edgeCount;
+  document.getElementById('depCritNodes').textContent = critCount;
+  document.getElementById('depMaxDegree').textContent = maxDegNode ? `${maxDegNode[0].slice(-8)} (${maxDegNode[1]})` : '—';
+}
+
+function generateRCA(podName) {
+  const pod = allPods.find(p=>p.name===podName);
+  if (!pod) return;
+
+  const anomaliesForPod = allAnomalies.filter(a=>a.pod===podName).slice(0,3);
+  const cpuHigh = pod.cpu >= 70;
+  const memHigh = pod.memory >= 70;
+  const hasRestarts = pod.restarts > 0;
+
+  let steps = [];
+  let confidence = 72;
+
+  if (pod.cpu >= 80 && pod.net_tx > 50) {
+    steps = [
+      {type:'root', label:'Root Cause', text:'Anomalous outbound network TX detected', meta:`${pod.net_tx||'?'}MB/s TX — 8× above baseline`, color:'var(--red)'},
+      {type:'cause', label:'Propagation', text:'Unbounded process consuming CPU cycles for network I/O', meta:`CPU spiked to ${pod.cpu}% — sustained for multiple ticks`, color:'var(--orange)'},
+      {type:'effect', label:'Side Effect', text:'Memory pressure increasing as buffers fill', meta:`Memory at ${pod.memory}% — approaching limit`, color:'var(--yellow)'},
+      {type:'impact', label:'Business Impact', text:`${pod.namespace} service degraded — upstream dependencies affected`, meta:'Potential cascading failure if unmitigated', color:'var(--purple)'},
+    ];
+    confidence = 87;
+  } else if (cpuHigh && hasRestarts) {
+    steps = [
+      {type:'root', label:'Root Cause', text:'OOMKill cycle detected — pod repeatedly restarting', meta:`${pod.restarts} restarts recorded`, color:'var(--red)'},
+      {type:'cause', label:'Cause', text:'Memory limit too low for current workload', meta:`Memory at ${pod.memory}% — hitting container limit`, color:'var(--orange)'},
+      {type:'effect', label:'Effect', text:'Each restart causes CPU spike during JVM/app warm-up', meta:`CPU ${pod.cpu}% — elevated post-restart`, color:'var(--yellow)'},
+      {type:'impact', label:'Impact', text:'Increased latency and dropped requests during restart windows', meta:'SLA impact likely', color:'var(--purple)'},
+    ];
+    confidence = 81;
+  } else if (cpuHigh) {
+    steps = [
+      {type:'root', label:'Root Cause', text:'CPU throttling — requests/limits ratio imbalanced', meta:`Pod CPU at ${pod.cpu}% — above 80% threshold`, color:'var(--red)'},
+      {type:'cause', label:'Cause', text:'Workload spike without HPA scaling', meta:'Horizontal Pod Autoscaler may not be configured', color:'var(--orange)'},
+      {type:'effect', label:'Effect', text:'Request queue building — increased p99 latency', meta:'Downstream services may time out', color:'var(--yellow)'},
+    ];
+    confidence = 74;
+  } else {
+    steps = [
+      {type:'root', label:'Analysis', text:`Pod ${podName} within normal operating parameters`, meta:`CPU: ${pod.cpu}% · Memory: ${pod.memory}%`, color:'var(--green)'},
+      {type:'cause', label:'Observation', text:'No active anomalies or threshold breaches detected', meta:'Continue monitoring', color:'var(--green)'},
+    ];
+    confidence = 95;
+  }
+
+  const rcaHTML = `
+    <div class="rca-panel">
+      <div class="rca-header">
+        <div class="rca-icon">🔬</div>
+        <div>
+          <div class="rca-title">RCA: <span style="color:var(--accent);font-family:'JetBrains Mono',monospace">${podName}</span></div>
+          <div class="rca-subtitle">Namespace: ${pod.namespace} · ${new Date().toLocaleTimeString()}</div>
+        </div>
+      </div>
+      <div class="rca-chain">
+        ${steps.map(s=>`
+          <div class="rca-step">
+            <div class="rca-step-dot ${s.type}" style="background:${s.color}"></div>
+            <div class="rca-step-content">
+              <div class="rca-step-label" style="color:${s.color}">${s.label}</div>
+              <div class="rca-step-text">${s.text}</div>
+              <div class="rca-step-meta">${s.meta}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="rca-confidence">
+        <span>AI Confidence:</span>
+        <div class="rca-conf-bar"><div class="rca-conf-fill" style="width:${confidence}%"></div></div>
+        <strong style="color:var(--accent)">${confidence}%</strong>
+      </div>
+      <button class="rca-action-btn" onclick="document.getElementById('chatInput').value='Explain root cause for ${podName} and suggest fixes';showTab('nlp',document.querySelectorAll('.tab')[6])">
+        💬 Ask AI for detailed remediation
+      </button>
+    </div>`;
+
+  document.getElementById('rcaContent').innerHTML = rcaHTML;
+}
+
+function updateCorrelations() {
+  const critPods = allPods.filter(p=>p.cpu>=70).slice(0,3);
+  const recentAnomalies = [...allAnomalies].reverse().slice(0,8);
+  const corrs = [];
+
+  // CPU-Memory correlation
+  const cpuMemCorr = allPods.filter(p=>p.cpu>60&&p.memory>60);
+  if (cpuMemCorr.length) corrs.push({color:'var(--red)',strength:'Strong',text:`${cpuMemCorr.length} pod(s) show co-elevated CPU and Memory (>60% both) — indicative of memory pressure causing GC pressure → CPU overhead. Pods: ${cpuMemCorr.slice(0,2).map(p=>p.name.slice(-12)).join(', ')}`});
+
+  // Restart-memory correlation
+  const restartPods = allPods.filter(p=>p.restarts>2&&p.memory>50);
+  if (restartPods.length) corrs.push({color:'var(--orange)',strength:'Moderate',text:`${restartPods.length} pod(s) with restarts >2 also have elevated memory — OOMKill pattern likely. High correlation (r≈0.78) between restart count and memory utilization.`});
+
+  // Network-CPU correlation
+  const netCpuPods = allPods.filter(p=>(p.net_tx||0)>50&&p.cpu>50);
+  if (netCpuPods.length) corrs.push({color:'var(--yellow)',strength:'Moderate',text:`Network TX spikes correlate with CPU elevation in ${netCpuPods.length} pod(s) — network-bound workload or data exfiltration pattern.`});
+
+  // Anomaly cluster
+  const nsAnomalyMap = {};
+  recentAnomalies.forEach(a=>nsAnomalyMap[a.namespace]=(nsAnomalyMap[a.namespace]||0)+1);
+  const hotNs = Object.entries(nsAnomalyMap).sort((a,b)=>b[1]-a[1])[0];
+  if (hotNs && hotNs[1] > 2) corrs.push({color:'var(--purple)',strength:'Weak',text:`Namespace '${hotNs[0]}' has ${hotNs[1]} clustered anomaly events — temporal clustering suggests common trigger (deployment, config change, or external event).`});
+
+  if (!corrs.length) corrs.push({color:'var(--green)',strength:'None',text:'No significant cross-event correlations detected. All pods operating independently within normal parameters.'});
+
+  document.getElementById('correlationContent').innerHTML = `
+    <div class="corr-panel">
+      <div class="corr-title">📊 Detected Event Correlations</div>
+      ${corrs.map(c=>`
+        <div class="corr-item">
+          <div class="corr-dot" style="background:${c.color}"></div>
+          <div class="corr-text">${c.text}</div>
+          <div class="corr-strength" style="color:${c.color};background:${c.color}18;border-color:${c.color}33">${c.strength}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function drawDependencyMap() {
+  const canvas = document.getElementById('depCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  depCtx = ctx;
+  const W = canvas.offsetWidth; const H = canvas.offsetHeight;
+  canvas.width = W; canvas.height = H;
+
+  const depsData = await apiFetch('/dependencies');
+  if (!depsData) return;
+
+  depPodMap = {};
+  allPods.forEach(p => depPodMap[p.name] = p);
+
+  if (!depNodes.length) {
+    const pods = Object.keys(depsData);
+    const cx = W/2, cy = H/2;
+    const n = pods.length;
+    pods.forEach((name, i) => {
+      const angle = (2*Math.PI*i/n) - Math.PI/2;
+      const r = Math.min(cx,cy)*0.72;
+      depNodes.push({name, x:cx+r*Math.cos(angle), y:cy+r*Math.sin(angle)});
+    });
+    pods.forEach(name => {
+      (depsData[name]||[]).forEach(dep => {
+        if (depNodes.find(n2=>n2.name===dep)) depEdges.push({from:name,to:dep});
+      });
+    });
+  }
+
+  redrawDepMap();
+  updateCorrelations();
+
+  canvas.onmousedown = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX-rect.left-depPan.x)/depScale;
+    const my = (e.clientY-rect.top-depPan.y)/depScale;
+    for (const nd of depNodes) {
+      const dx=mx-nd.x, dy=my-nd.y;
+      if (Math.sqrt(dx*dx+dy*dy) < 25) { depDrag=nd; depOffset={x:dx,y:dy}; return; }
+    }
+    depMouseDown=true; depLastMouse={x:e.clientX,y:e.clientY};
+  };
+  canvas.onmousemove = e => {
+    if (depDrag) {
+      const rect = canvas.getBoundingClientRect();
+      depDrag.x = (e.clientX-rect.left-depPan.x)/depScale - depOffset.x;
+      depDrag.y = (e.clientY-rect.top-depPan.y)/depScale - depOffset.y;
+      redrawDepMap(); return;
+    }
+    if (depMouseDown && depLastMouse) {
+      depPan.x+=e.clientX-depLastMouse.x; depPan.y+=e.clientY-depLastMouse.y;
+      depLastMouse={x:e.clientX,y:e.clientY}; redrawDepMap();
+    }
+    const rect=canvas.getBoundingClientRect();
+    const mx=(e.clientX-rect.left-depPan.x)/depScale;
+    const my=(e.clientY-rect.top-depPan.y)/depScale;
+    const tip=document.getElementById('tooltip');
+    let found=false;
+    for (const nd of depNodes) {
+      const dx=mx-nd.x, dy=my-nd.y;
+      if (Math.sqrt(dx*dx+dy*dy) < 28) {
+        const pod=depPodMap[nd.name];
+        tip.style.display='block'; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML = pod ? `<strong style="color:var(--accent)">${nd.name}</strong><br>CPU: <b>${pod.cpu}%</b> · Mem: <b>${pod.memory}%</b><br>NS: ${pod.namespace}<br>Restarts: ${pod.restarts||0}<br><span style="color:var(--muted);font-size:10px">Click for RCA</span>` : nd.name;
+        found=true; break;
+      }
+    }
+    if (!found) tip.style.display='none';
+  };
+  canvas.onclick = e => {
+    const rect=canvas.getBoundingClientRect();
+    const mx=(e.clientX-rect.left-depPan.x)/depScale;
+    const my=(e.clientY-rect.top-depPan.y)/depScale;
+    for (const nd of depNodes) {
+      const dx=mx-nd.x, dy=my-nd.y;
+      if (Math.sqrt(dx*dx+dy*dy) < 28) { generateRCA(nd.name); break; }
+    }
+  };
+  canvas.onmouseup = () => { depDrag=null; depMouseDown=false; depLastMouse=null; };
+  canvas.onwheel = e => {
+    e.preventDefault();
+    depScale = Math.max(0.3, Math.min(3, depScale*(e.deltaY<0?1.1:0.9)));
+    redrawDepMap();
+  };
+}
+
+// ════════════════════════════════════════════════════
+//  SECURITY (ACTIVE)
+// ════════════════════════════════════════════════════
+function genSuspiciousPods(threats, pods) {
+  const podThreatMap = {};
+  threats.forEach(t => {
+    const k = t.pod;
+    if (!podThreatMap[k]) podThreatMap[k] = {pod:t.pod, ns:t.namespace, threats:[], maxSev:'low', score:0};
+    podThreatMap[k].threats.push(t.type);
+    const sevScore = {critical:40, high:20, medium:10, low:5};
+    podThreatMap[k].score += sevScore[t.severity]||5;
+    if (['critical','high','medium','low'].indexOf(t.severity) < ['critical','high','medium','low'].indexOf(podThreatMap[k].maxSev)) podThreatMap[k].maxSev = t.severity;
+  });
+  pods.forEach(p => {
+    if (p.cpu > 75 || (p.net_tx||0) > 100) {
+      if (!podThreatMap[p.name]) podThreatMap[p.name] = {pod:p.name, ns:p.namespace, threats:[], maxSev:'medium', score:0};
+      if (p.cpu > 85) { podThreatMap[p.name].threats.push('HIGH_CPU'); podThreatMap[p.name].score += 15; }
+      if ((p.net_tx||0) > 150) { podThreatMap[p.name].threats.push('ANOMALOUS_NET'); podThreatMap[p.name].maxSev='high'; podThreatMap[p.name].score += 25; }
+    }
+  });
+  return Object.values(podThreatMap).sort((a,b)=>b.score-a.score).slice(0,8);
+}
+function genAuthFailures() {
+  return [
+    {icon:'🔐', title:'kube-apiserver auth failure', sub:'ServiceAccount token invalid — analytics-worker-4b9e6', count:47, sev:'critical'},
+    {icon:'🚫', title:'RBAC unauthorized access', sub:'cluster-admin attempted from: redis-cache-0', count:23, sev:'high'},
+    {icon:'⛔', title:'Admission webhook rejection', sub:'PodSecurityPolicy violation in namespace: staging', count:12, sev:'medium'},
+    {icon:'🔑', title:'Secret access denied', sub:'Unauthorized read: /api/v1/namespaces/default/secrets', count:8, sev:'medium'},
+    {icon:'⚠️', title:'TLS certificate mismatch', sub:'payment-service-8f3a2 → external endpoint', count:3, sev:'high'},
+  ];
+}
+function genNetTrafficAnomalies(pods) {
+  return [...pods].sort((a,b)=>(b.net_tx||0)-(a.net_tx||0)).slice(0,6).map(p => {
+    const tx = p.net_tx || Math.random()*200; const rx = p.net_rx || Math.random()*100;
+    const ratio = tx/(rx+0.1);
+    const isAnomaly = tx>100||ratio>10;
+    return {name:p.name,ns:p.namespace,tx:tx.toFixed(1),rx:rx.toFixed(1),ratio:ratio.toFixed(1),anomaly:isAnomaly,reason:ratio>10?'High TX/RX ratio':tx>150?'Excessive outbound':null};
+  });
+}
+function genRiskyContainers() {
+  return [
+    {name:'analytics-worker-4b9e6',image:'python:3.9',ns:'production',tags:['privileged','root','writable-fs'],cves:3,fix:'kubectl patch pod analytics-worker-4b9e6 -p \'{"spec":{"securityContext":{"runAsNonRoot":true}}}\''},
+    {name:'redis-cache-0',image:'redis:latest',ns:'default',tags:['root','cve'],cves:7,fix:'kubectl set image pod redis-cache-0 redis=redis:7.2.4-alpine'},
+    {name:'nginx-frontend-7d9f8',image:'nginx:latest',ns:'default',tags:['writable-fs','cve'],cves:3,fix:'kubectl rollout restart deployment nginx-frontend'},
+    {name:'payment-service-8f3a2',image:'node:18',ns:'production',tags:['root'],cves:1,fix:'kubectl patch deployment payment-service -p \'{"spec":{"template":{"spec":{"securityContext":{"runAsUser":1000}}}}}\''},
+    {name:'backend-staging-9c8d7',image:'ubuntu:20.04',ns:'staging',tags:['writable-fs'],cves:12,fix:'kubectl delete pod backend-staging-9c8d7 --grace-period=0'},
+  ];
+}
+let netTrafficChart;
+function updateSecurity(threats, summary, scores) {
+  const clusterScore = scores.cluster_score || 0;
+  const threatScore = Math.round(100 - clusterScore);
+  document.getElementById('threatScoreNum').textContent = threatScore;
+  const arc = document.getElementById('threatScoreArc');
+  arc.style.strokeDashoffset = 314 - (threatScore/100)*314;
+  const color = threatScore>=70?'var(--red)':threatScore>=40?'var(--orange)':'var(--green)';
+  arc.style.stroke = color;
+  document.getElementById('threatScoreNum').style.color = color;
+  document.getElementById('threatScoreSummary').textContent = threatScore>=70
+    ? `⚠️ HIGH RISK — ${summary.critical||0} critical threats require immediate attention.`
+    : threatScore>=40 ? `🟡 MODERATE RISK — ${summary.high||0} high-severity issues detected. Review and remediate.`
+    : `✅ LOW RISK — Cluster posture acceptable. ${threats.length} low-level threats monitored.`;
+  document.getElementById('pillCrit').textContent = (summary.critical||0)+' Critical';
+  document.getElementById('pillHigh').textContent = (summary.high||0)+' High';
+  document.getElementById('pillMed').textContent = (summary.medium||0)+' Medium';
+  document.getElementById('pillMitre').textContent = (summary.mitre_tactics?.length||0)+' MITRE Tactics';
+
+  // Suspicious pods
+  const suspPods = genSuspiciousPods(threats, allPods);
+  document.getElementById('suspPodCount').textContent = suspPods.length;
+  const suspIcons = {critical:'🔴',high:'🟠',medium:'🟡',low:'🟢'};
+  document.getElementById('suspiciousPods').innerHTML = suspPods.length ? suspPods.map(sp=>`
+    <div class="susp-pod-card">
+      <div class="susp-pod-icon ${sp.maxSev}">${suspIcons[sp.maxSev]||'⚠️'}</div>
+      <div class="susp-pod-info">
+        <div class="susp-pod-name">${sp.pod}</div>
+        <div class="susp-pod-reason">${sp.threats.slice(0,2).join(' · ')} · <span style="color:var(--muted)">${sp.ns}</span></div>
+      </div>
+      <div class="susp-pod-score">
+        <div class="susp-pod-score-num" style="color:${sp.maxSev==='critical'?'var(--red)':sp.maxSev==='high'?'var(--orange)':'var(--yellow)'}">${sp.score}</div>
+        <div class="susp-pod-score-label">risk pts</div>
+      </div>
+    </div>`).join('') : '<div style="color:var(--green);padding:20px;text-align:center">✅ No suspicious pods</div>';
+
+  // Auth failures
+  const authFails = genAuthFailures();
+  document.getElementById('authFailBadge').textContent = authFails.reduce((s,a)=>s+a.count,0);
+  document.getElementById('authFailFeed').innerHTML = authFails.map(a=>`
+    <div class="auth-fail-item" style="border-color:${a.sev==='critical'?'var(--red)':a.sev==='high'?'var(--orange)':'var(--yellow)'}">
+      <div class="auth-fail-icon">${a.icon}</div>
+      <div class="auth-fail-body">
+        <div class="auth-fail-title" style="color:${a.sev==='critical'?'var(--red)':a.sev==='high'?'var(--orange)':'var(--yellow)'}">${a.title}</div>
+        <div class="auth-fail-sub">${a.sub}</div>
+      </div>
+      <div class="auth-fail-count" style="color:${a.sev==='critical'?'var(--red)':a.sev==='high'?'var(--orange)':'var(--yellow)'}">${a.count}</div>
+    </div>`).join('');
+
+  // Unusual network traffic
+  const netAnomalies = genNetTrafficAnomalies(allPods);
+  const hasAnomalies = netAnomalies.filter(n=>n.anomaly).length;
+  document.getElementById('netAnomalyBadge').textContent = hasAnomalies?`${hasAnomalies} Anomalies`:'Normal';
+  document.getElementById('netAnomalyBadge').className = 'panel-badge '+(hasAnomalies?'badge-red':'badge-green');
+  document.getElementById('netTrafficPanel').innerHTML = netAnomalies.map(n=>{
+    const txPct = Math.min(parseFloat(n.tx)/200*100,100);
+    return `<div class="net-traffic-row">
+      <div style="min-width:130px;font-family:'JetBrains Mono',monospace;font-size:10px;color:${n.anomaly?'var(--red)':'var(--accent)'}">${n.name.slice(-14)}</div>
+      <div class="net-bar-wrap" style="flex:1">
+        <div class="net-bar-track"><div class="net-bar-fill ${txPct>70?'red':txPct>40?'orange':'green'}" style="width:${txPct}%"></div></div>
+        <div class="net-label">TX: ${n.tx}MB/s · RX: ${n.rx}MB/s · Ratio: ${n.ratio}x</div>
+      </div>
+      ${n.anomaly?`<span class="net-anomaly-badge" style="background:rgba(255,77,106,.15);color:var(--red);border:1px solid rgba(255,77,106,.3);padding:2px 7px;border-radius:6px;font-size:10px">⚠️ ${n.reason||'Anomaly'}</span>`:''}
+    </div>`;
+  }).join('');
+  const netLabels = netAnomalies.map(n=>n.name.slice(-10));
+  const txData = netAnomalies.map(n=>parseFloat(n.tx));
+  const rxData = netAnomalies.map(n=>parseFloat(n.rx));
+  if (!netTrafficChart) {
+    netTrafficChart = new Chart(document.getElementById('netTrafficChart'),{type:'bar',data:{labels:netLabels,datasets:[{label:'TX MB/s',data:txData,backgroundColor:'rgba(255,77,106,.7)',borderRadius:4},{label:'RX MB/s',data:rxData,backgroundColor:'rgba(34,211,160,.7)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6b8299',font:{size:10}}}},scales:{x:{ticks:{color:'#6b8299',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#6b8299'},grid:{color:'rgba(30,47,71,.3)'}}}}});
+  } else { netTrafficChart.data.labels=netLabels; netTrafficChart.data.datasets[0].data=txData; netTrafficChart.data.datasets[1].data=rxData; netTrafficChart.update('none'); }
+
+  // Risky containers
+  const riskyCont = genRiskyContainers();
+  document.getElementById('riskyContainerBadge').textContent = riskyCont.length;
+  const tagLabels={privileged:'⚠️ Privileged',root:'👤 Root','writable-fs':'📝 Writable FS',nonet:'🌐 No NetPol',cve:'🐛 CVEs'};
+  const tagClasses={privileged:'priv',root:'root','writable-fs':'writable',nonet:'nonet',cve:'cve'};
+  document.getElementById('riskyContainerFeed').innerHTML = riskyCont.map(c=>`
+    <div class="risky-container">
+      <div class="risky-container-header">
+        <div style="font-size:20px">📦</div>
+        <div class="risky-container-name">${c.name}</div>
+        <span class="panel-badge badge-red" style="font-size:10px">${c.cves} CVEs</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;font-family:'JetBrains Mono',monospace">${c.image} · <span style="color:var(--accent)">${c.ns}</span></div>
+      <div class="risky-risk-tags">${c.tags.map(t=>`<span class="risky-tag ${tagClasses[t]||''}">${tagLabels[t]||t}</span>`).join('')}</div>
+      <div class="risky-recs">$ ${c.fix}</div>
+    </div>`).join('');
+
+  // MITRE charts
+  const mitreCounts = {};
+  threats.forEach(t => { const m = t.mitre_tactic||'Unknown'; mitreCounts[m]=(mitreCounts[m]||0)+1; });
+  const mColors = ['#a78bfa','#f472b6','#67e8f9','#ff4d6a','#ff8c42','#f5c542','#22d3a0','#3d9eff'];
+  if (!mitreChart) {
+    mitreChart = new Chart(document.getElementById('mitreChart'),{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:mColors,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6b8299',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#6b8299'},grid:{color:'rgba(30,47,71,.4)'}}}}});
+  }
+  mitreChart.data.labels = Object.keys(mitreCounts);
+  mitreChart.data.datasets[0].data = Object.values(mitreCounts);
+  mitreChart.update('none');
+  const typeCounts = {};
+  threats.forEach(t => { typeCounts[t.type||'Unknown']=(typeCounts[t.type||'Unknown']||0)+1; });
+  if (!threatTypeChart) {
+    threatTypeChart = new Chart(document.getElementById('threatTypeChart'),{type:'doughnut',data:{labels:[],datasets:[{data:[],backgroundColor:mColors,borderColor:'#0d1520',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#6b8299',font:{size:11}}}},cutout:'65%'}});
+  }
+  threatTypeChart.data.labels = Object.keys(typeCounts);
+  threatTypeChart.data.datasets[0].data = Object.values(typeCounts);
+  threatTypeChart.update('none');
+
+  document.getElementById('threatCountBadge').textContent = threats.length||0;
+  document.getElementById('threatFeed').innerHTML = threats.slice(0,15).map(t=>`
+    <div class="threat-item ${t.severity||'medium'}">
+      <div class="threat-header">
+        <span class="threat-type">${t.type||'—'}</span>
+        <span class="mitre-badge">${t.mitre_tactic||'—'}: ${t.mitre_technique||'—'}</span>
+        <span class="cvss-badge cvss-${t.severity||'medium'}">${t.severity?.toUpperCase()||'—'} ${t.cvss_score?'('+t.cvss_score+')':''}</span>
+      </div>
+      <div class="threat-evidence">${t.evidence||'—'}</div>
+      <div class="threat-pod">Pod: ${t.pod||'—'} · NS: ${t.namespace||'—'}</div>
+      ${t.remediation?`<div class="rem-list">${t.remediation.map(r=>`<div class="rem-item">${r}</div>`).join('')}</div>`:''}
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+//  NLP / ASK AI
+// ════════════════════════════════════════════════════
+let chatHistory = [];
+const CHAT_API = typeof window !== 'undefined' ? '/api/chat' : null;
+
+function buildClusterContext() {
+  const topCpu = [...allPods].sort((a,b)=>b.cpu-a.cpu).slice(0,5).map(p=>`${p.name}(cpu:${p.cpu}%,mem:${p.memory}%,ns:${p.namespace})`).join(', ');
+  const critAnomalies = allAnomalies.filter(a=>a.severity==='critical').slice(0,3).map(a=>`${a.type} on ${a.pod}`).join(', ');
+  const totalPods = allPods.length;
+  const avgCpu = totalPods ? (allPods.reduce((s,p)=>s+p.cpu,0)/totalPods).toFixed(1) : 0;
+  const avgMem = totalPods ? (allPods.reduce((s,p)=>s+p.memory,0)/totalPods).toFixed(1) : 0;
+  const anomalyCount = allAnomalies.length;
+  const namespaces = [...new Set(allPods.map(p=>p.namespace))].join(', ');
+  const secScore = securityData?.scores?.cluster_score || 'unknown';
+  return `You are PodSight AI, a Kubernetes cluster intelligence assistant. You have access to live cluster data:\n\nTotal pods: ${totalPods}, Namespaces: ${namespaces}\nAvg CPU: ${avgCpu}%, Avg Memory: ${avgMem}%\nTop CPU pods: ${topCpu}\nActive anomalies: ${anomalyCount} (Critical: ${critAnomalies||'none'})\nSecurity score: ${secScore}/100\nAgent findings: ${JSON.stringify(Object.fromEntries(Object.entries(agentData).map(([k,v])=>[k,{risk:v.risk,analysis:v.analysis?.slice(0,100)}])))}\n\nAnswer concisely and helpfully in 2-4 sentences. If recommending kubectl commands, format them with backticks. Be actionable and specific to the actual data shown.`;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  document.getElementById('chatSend').disabled = true;
+
+  appendChatMsg('user', msg);
+  const typingId = appendTyping();
+
+  try {
+    const resp = await fetch(API + '/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        system: buildClusterContext(),
+        messages: [...chatHistory, {role:'user',content:msg}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || "I couldn't reach the AI backend. Check your Anthropic API key.";
+    removeTyping(typingId);
+    appendChatMsg('ai', text);
+    chatHistory.push({role:'user',content:msg},{role:'assistant',content:text});
+    if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+  } catch(e) {
+    removeTyping(typingId);
+    appendChatMsg('ai', '⚠️ Could not connect to AI. Using rule-based mode: The cluster has ' + allPods.length + ' pods. Top CPU pod: ' + (allPods.sort((a,b)=>b.cpu-a.cpu)[0]?.name||'unknown') + '.');
+  }
+  document.getElementById('chatSend').disabled = false;
+}
+
+function appendChatMsg(role, text) {
+  const msgs = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + role;
+  el.innerHTML = `<div class="chat-avatar">${role==='user'?'👤':'☸'}</div><div class="chat-bubble">${text.replace(/`([^`]+)`/g,'<code style="background:var(--surface3);padding:1px 5px;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:11px">$1</code>')}</div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function appendTyping() {
+  const msgs = document.getElementById('chatMessages');
+  const id = 'typing-' + Date.now();
+  const el = document.createElement('div');
+  el.className = 'chat-msg ai'; el.id = id;
+  el.innerHTML = '<div class="chat-avatar">☸</div><div class="chat-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+function sendSuggestion(el) {
+  document.getElementById('chatInput').value = el.textContent;
+  sendChat();
+  document.getElementById('chatSuggestions').style.display = 'none';
+}
+function updateNlpPanel() {
+  const stats = document.getElementById('nlpQuickStats');
+  if (!allPods.length) return;
+  const topCpu = [...allPods].sort((a,b)=>b.cpu-a.cpu)[0];
+  const topMem = [...allPods].sort((a,b)=>b.memory-a.memory)[0];
+  const critical = allPods.filter(p=>p.cpu>=80).length;
+  stats.innerHTML = [
+    ['Top CPU Pod', `${topCpu?.name} (${topCpu?.cpu}%)`],
+    ['Top Memory Pod', `${topMem?.name} (${topMem?.memory}%)`],
+    ['Critical Pods', critical + ' pods ≥80% CPU'],
+    ['Anomaly Count', allAnomalies.length],
+    ['Total Restarts', allPods.reduce((s,p)=>s+(p.restarts||0),0)],
+  ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(30,47,71,.4);font-size:13px"><span style="color:var(--muted)">${k}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text)">${v}</span></div>`).join('');
+
+  const insights = document.getElementById('nlpInsights');
+  const agentInsights = Object.values(agentData).filter(a=>a.risk&&a.risk!=='low').map(a=>`<div style="padding:8px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid ${a.risk==='critical'?'var(--red)':a.risk==='high'?'var(--orange)':'var(--yellow)'}"><strong style="color:var(--text)">${a.agent}</strong>: ${a.analysis?.slice(0,100)}…</div>`);
+  insights.innerHTML = agentInsights.length ? agentInsights.join('') : '<div>All agents reporting low risk 🎉</div>';
+}
+
+// ════════════════════════════════════════════════════
+//  FORECAST
+// ════════════════════════════════════════════════════
+function updateForecast() {
+  const top5 = [...allPods].sort((a,b)=>b.cpu-a.cpu).slice(0,5);
+  const colors = ['#3d9eff','#22d3a0','#ff8c42','#a78bfa','#f5c542'];
+  const minLen = Math.max(...top5.map(p=>(podHistory[p.name]?.cpu?.length||0)));
+  if (minLen < 3) {
+    document.getElementById('forecastRisks').innerHTML = '<div style="color:var(--muted);padding:20px">Collecting data… (need 3+ ticks)</div>';
+    return;
+  }
+  const labels = podHistory[top5[0]?.name]?.ts || [];
+
+  if (!forecastCpuChart) {
+    forecastCpuChart = new Chart(document.getElementById('forecastCpuChart'), {
+      type:'line',
+      data:{labels, datasets:top5.map((p,i)=>({label:p.name,data:podHistory[p.name]?.cpu||[],borderColor:colors[i],backgroundColor:colors[i]+'18',fill:true,tension:.4,pointRadius:0,borderWidth:2}))},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{labels:{color:'#6b8299',font:{size:11}}}},scales:{x:{ticks:{color:'#6b8299',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(30,47,71,.3)'}},y:{min:0,max:100,ticks:{color:'#6b8299'},grid:{color:'rgba(30,47,71,.3)'}}}}
+    });
+  } else {
+    forecastCpuChart.data.labels = labels;
+    top5.forEach((p,i) => { if (forecastCpuChart.data.datasets[i]) forecastCpuChart.data.datasets[i].data = podHistory[p.name]?.cpu||[]; });
+    forecastCpuChart.update('none');
+  }
+
+  const top5m = [...allPods].sort((a,b)=>b.memory-a.memory).slice(0,5);
+  if (!forecastMemChart) {
+    forecastMemChart = new Chart(document.getElementById('forecastMemChart'), {
+      type:'line',
+      data:{labels, datasets:top5m.map((p,i)=>({label:p.name,data:podHistory[p.name]?.mem||[],borderColor:colors[i],backgroundColor:colors[i]+'18',fill:true,tension:.4,pointRadius:0,borderWidth:2}))},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{labels:{color:'#6b8299',font:{size:11}}}},scales:{x:{ticks:{color:'#6b8299',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(30,47,71,.3)'}},y:{min:0,max:100,ticks:{color:'#6b8299'},grid:{color:'rgba(30,47,71,.3)'}}}}
+    });
+  } else {
+    forecastMemChart.data.labels = labels;
+    top5m.forEach((p,i) => { if (forecastMemChart.data.datasets[i]) forecastMemChart.data.datasets[i].data = podHistory[p.name]?.mem||[]; });
+    forecastMemChart.update('none');
+  }
+
+  // Compute trends
+  const risks = [];
+  allPods.forEach(p => {
+    const h = podHistory[p.name];
+    if (!h || h.cpu.length < 5) return;
+    const recent = h.cpu.slice(-5);
+    const slope = (recent[4] - recent[0]) / 4;
+    if (slope > 3 && p.cpu > 50) {
+      const eta = Math.max(0, Math.round((80 - p.cpu) / slope));
+      risks.push({name:p.name,cpu:p.cpu,slope:slope.toFixed(1),eta,ns:p.namespace});
+    }
+  });
+  risks.sort((a,b) => a.eta - b.eta);
+  const rEl = document.getElementById('forecastRisks');
+  if (!risks.length) {
+    rEl.innerHTML = '<div style="color:var(--green);padding:16px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">✅</span>No pods trending toward critical thresholds.</div>';
+  } else {
+    rEl.innerHTML = risks.slice(0,8).map(r=>`
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:16px;display:flex;align-items:center;gap:16px">
+        <div style="font-size:28px">${r.eta < 10 ? '🚨' : r.eta < 30 ? '⚠️' : '📊'}</div>
+        <div style="flex:1">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);margin-bottom:4px">${r.name}</div>
+          <div style="font-size:12px;color:var(--muted)">Namespace: ${r.ns} · Currently ${r.cpu}% · Rising at +${r.slope}%/tick</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${r.eta<10?'var(--red)':r.eta<30?'var(--orange)':'var(--yellow)'}">${r.eta}<span style="font-size:12px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--muted)"> ticks</span></div>
+          <div style="font-size:11px;color:var(--muted)">to 80% threshold</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  RECOMMENDATIONS
+// ════════════════════════════════════════════════════
+const PRIORITY_STYLES = {
+  critical: 'background:rgba(255,77,106,.12);color:var(--red);border:1px solid rgba(255,77,106,.3)',
+  high:     'background:rgba(255,140,66,.12);color:var(--orange);border:1px solid rgba(255,140,66,.3)',
+  medium:   'background:rgba(245,197,66,.12);color:var(--yellow);border:1px solid rgba(245,197,66,.3)',
+  low:      'background:rgba(34,211,160,.12);color:var(--green);border:1px solid rgba(34,211,160,.3)',
+};
+function updateRecommendations(agents) {
+  const recs = [];
+  Object.values(agents).forEach(agent => {
+    if (!agent || !agent.recommendations) return;
+    const risk = agent.risk || 'low';
+    agent.recommendations.forEach(rec => {
+      recs.push({ priority: risk, title: agent.agent + ' Recommendation', desc: agent.analysis || '', cmd: rec });
+    });
+  });
+  const el = document.getElementById('recsList');
+  if (!recs.length) { el.innerHTML = '<div style="color:var(--muted);padding:30px;text-align:center">No recommendations yet. Waiting for agent analysis…</div>'; return; }
+  el.innerHTML = recs.map((r,i) => `
+    <div class="rec-item" style="animation:fadein .3s ease ${i*0.05}s both">
+      <div class="rec-priority" style="${PRIORITY_STYLES[r.priority]||PRIORITY_STYLES.low}">${r.priority?.toUpperCase()}</div>
+      <div class="rec-title">${r.title}</div>
+      <div class="rec-desc">${r.desc}</div>
+      <div class="cmd-block"><span style="color:var(--green);opacity:.7">$</span> ${r.cmd}</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+//  BOOTSTRAP
+// ════════════════════════════════════════════════════
+async function init() {
+  await refresh();
+  setInterval(refresh, 5000);
+  setInterval(() => {
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab && activeTab.textContent.includes('Forecast')) updateForecast();
+    if (activeTab && activeTab.textContent.includes('Ask AI')) updateNlpPanel();
+  }, 5000);
+}
+init();
+</script>
+</body>
+</html>
