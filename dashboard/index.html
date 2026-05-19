@@ -1791,14 +1791,13 @@ async function sendChat() {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
         max_tokens:600,
         system: buildClusterContext(),
         messages: [...chatHistory, {role:'user',content:msg}]
       })
     });
     const data = await resp.json();
-    const text = data.content?.[0]?.text || "I couldn't reach the AI backend. Check your Anthropic API key.";
+    const text = data.content?.[0]?.text || data.error || "Sorry, I couldn't get a response. Please try again.";
     removeTyping(typingId);
     appendChatMsg('ai', text);
     chatHistory.push({role:'user',content:msg},{role:'assistant',content:text});
